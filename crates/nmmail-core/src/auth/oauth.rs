@@ -27,6 +27,8 @@ pub struct Endpoints {
     pub extra: &'static [(&'static str, &'static str)],
     /// Redirect host: Google wants the loopback IP, Microsoft registers "localhost".
     pub redirect_host: &'static str,
+    /// Microsoft wants the scopes repeated when refreshing.
+    pub refresh_scope: bool,
 }
 
 pub fn endpoints(p: Provider) -> Option<Endpoints> {
@@ -37,6 +39,7 @@ pub fn endpoints(p: Provider) -> Option<Endpoints> {
             scopes: "https://mail.google.com/ openid email profile",
             extra: &[("access_type", "offline"), ("prompt", "consent")],
             redirect_host: "127.0.0.1",
+            refresh_scope: false,
         }),
         Provider::Outlook => Some(Endpoints {
             auth_url: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
@@ -44,6 +47,7 @@ pub fn endpoints(p: Provider) -> Option<Endpoints> {
             scopes: "https://outlook.office.com/IMAP.AccessAsUser.All https://outlook.office.com/SMTP.Send offline_access openid email profile",
             extra: &[("prompt", "select_account")],
             redirect_host: "localhost",
+            refresh_scope: true,
         }),
         Provider::Imap => None,
     }
@@ -205,6 +209,15 @@ fn tokens_from(r: TokenResponse) -> Result<(Tokens, Option<String>)> {
 /// Uses a refresh token to obtain a new access token.
 pub async fn refresh(p: Provider, client: &ClientId, refresh_token: &str) -> Result<Tokens> {
     let ep = endpoints(p).ok_or_else(|| anyhow!("provider has no OAuth"))?;
+    refresh_with(&ep, client, refresh_token).await
+}
+
+/// [`refresh`] against explicit endpoints.
+pub async fn refresh_with(
+    ep: &Endpoints,
+    client: &ClientId,
+    refresh_token: &str,
+) -> Result<Tokens> {
     let mut form = vec![
         ("grant_type", "refresh_token".to_string()),
         ("refresh_token", refresh_token.to_string()),
@@ -213,7 +226,7 @@ pub async fn refresh(p: Provider, client: &ClientId, refresh_token: &str) -> Res
     if let Some(s) = &client.secret {
         form.push(("client_secret", s.clone()));
     }
-    if p == Provider::Outlook {
+    if ep.refresh_scope {
         form.push(("scope", ep.scopes.to_string()));
     }
     Ok(tokens_from(post_token(ep.token_url, form).await?)?.0)
@@ -236,6 +249,17 @@ pub async fn authorize(
     cancel: Arc<Notify>,
 ) -> Result<(Tokens, Identity)> {
     let ep = endpoints(p).ok_or_else(|| anyhow!("provider has no OAuth"))?;
+    authorize_with(&ep, client, open_url, progress, cancel).await
+}
+
+/// [`authorize`] against explicit endpoints.
+pub async fn authorize_with(
+    ep: &Endpoints,
+    client: &ClientId,
+    open_url: &(dyn Fn(&str) + Send + Sync),
+    progress: &(dyn Fn(Stage, Option<&str>) + Send + Sync),
+    cancel: Arc<Notify>,
+) -> Result<(Tokens, Identity)> {
     if client.id.trim().is_empty() {
         return Err(coded(
             ErrorCode::BadRequest,
@@ -449,6 +473,121 @@ mod tests {
         };
         let (code, _) = tokio::join!(recv, browser);
         assert_eq!(code.unwrap(), "abc");
+    }
+
+    /// Minimal token endpoint: answers one POST with `body`, returns the form it got.
+    async fn mock_token_endpoint(l: TcpListener, body: String) -> String {
+        let (mut s, _) = l.accept().await.unwrap();
+        let mut buf = Vec::new();
+        let mut tmp = [0u8; 4096];
+        loop {
+            let n = s.read(&mut tmp).await.unwrap();
+            buf.extend_from_slice(&tmp[..n]);
+            let text = String::from_utf8_lossy(&buf).to_string();
+            if let Some(h) = text.find("\r\n\r\n") {
+                let len: usize = text
+                    .lines()
+                    .find_map(|l| {
+                        l.to_ascii_lowercase()
+                            .strip_prefix("content-length:")
+                            .map(|v| v.trim().parse().unwrap())
+                    })
+                    .unwrap_or(0);
+                if buf.len() >= h + 4 + len {
+                    let form = text[h + 4..h + 4 + len].to_string();
+                    let resp = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    );
+                    s.write_all(resp.as_bytes()).await.unwrap();
+                    return form;
+                }
+            }
+            if n == 0 {
+                return String::new();
+            }
+        }
+    }
+
+    fn leaked_token_url(l: &TcpListener) -> &'static str {
+        Box::leak(
+            format!("http://127.0.0.1:{}/token", l.local_addr().unwrap().port()).into_boxed_str(),
+        )
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn full_flow_against_mock_provider() {
+        let token = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let ep = Endpoints {
+            auth_url: "https://login.example.invalid/authorize",
+            token_url: leaked_token_url(&token),
+            scopes: "mail offline_access",
+            extra: &[("prompt", "consent")],
+            redirect_host: "127.0.0.1",
+            refresh_scope: true,
+        };
+        let id_payload = URL_SAFE_NO_PAD.encode(br#"{"email":"mario@example.com","name":"Mario"}"#);
+        let body = format!(
+            r#"{{"access_token":"at-1","expires_in":3600,"refresh_token":"rt-1","id_token":"h.{id_payload}.s"}}"#
+        );
+        let server = tokio::spawn(mock_token_endpoint(token, body));
+
+        let challenge = Arc::new(std::sync::Mutex::new(String::new()));
+        let ch = challenge.clone();
+        // The "browser" follows the authorization URL straight to the redirect.
+        let open = move |auth_url: &str| {
+            let u = url::Url::parse(auth_url).unwrap();
+            let q: std::collections::HashMap<_, _> = u.query_pairs().into_owned().collect();
+            assert_eq!(q["code_challenge_method"], "S256");
+            assert_eq!(q["prompt"], "consent");
+            *ch.lock().unwrap() = q["code_challenge"].clone();
+            let port = url::Url::parse(&q["redirect_uri"]).unwrap().port().unwrap();
+            let path = format!("/?code=c0de&state={}", q["state"]);
+            tokio::spawn(async move {
+                let r = browser_get(port, &path).await;
+                assert!(r.contains("Accesso completato"));
+            });
+        };
+        let progress = |_: Stage, _: Option<&str>| {};
+        let client = ClientId {
+            id: "client-1".into(),
+            secret: Some("s3cret".into()),
+        };
+        let (tokens, id) = authorize_with(&ep, &client, &open, &progress, Arc::new(Notify::new()))
+            .await
+            .unwrap();
+        assert_eq!(tokens.access_token, "at-1");
+        assert_eq!(tokens.refresh_token.as_deref(), Some("rt-1"));
+        assert_eq!(id.email, "mario@example.com");
+
+        // The token request carried the code and a verifier matching the challenge.
+        let form: std::collections::HashMap<String, String> =
+            url::form_urlencoded::parse(server.await.unwrap().as_bytes())
+                .into_owned()
+                .collect();
+        assert_eq!(form["grant_type"], "authorization_code");
+        assert_eq!(form["code"], "c0de");
+        assert_eq!(form["client_secret"], "s3cret");
+        assert_eq!(
+            pkce_challenge(&form["code_verifier"]),
+            *challenge.lock().unwrap()
+        );
+
+        // Refresh (Microsoft-style: scopes repeated) and error mapping.
+        let token = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let ep2 = Endpoints {
+            token_url: leaked_token_url(&token),
+            ..ep
+        };
+        let server = tokio::spawn(mock_token_endpoint(
+            token,
+            r#"{"error":"invalid_grant","error_description":"expired"}"#.into(),
+        ));
+        let err = refresh_with(&ep2, &client, "rt-1").await.unwrap_err();
+        assert_eq!(crate::error::code_of(&err), ErrorCode::AuthRequired);
+        let form = server.await.unwrap();
+        assert!(form.contains("grant_type=refresh_token"));
+        assert!(form.contains("scope=mail+offline_access"));
     }
 
     #[tokio::test]

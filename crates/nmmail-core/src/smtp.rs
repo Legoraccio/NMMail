@@ -58,14 +58,19 @@ pub async fn send(
     transport.send_raw(&envelope, raw).await.map_err(|e| {
         let msg = e.to_string();
         let lower = msg.to_lowercase();
-        let code =
-            if lower.contains("535") || lower.contains("authentication") || lower.contains("534") {
-                ErrorCode::AuthRequired
-            } else if e.is_permanent() {
-                ErrorCode::Server
-            } else {
-                ErrorCode::Offline
-            };
+        // A rejected XOAUTH2 token comes back as a "334 <error JSON>" challenge,
+        // which lettre reports as an unexpected challenge.
+        let code = if lower.contains("535")
+            || lower.contains("534")
+            || lower.contains("authentication")
+            || lower.contains("does not expect a challenge")
+        {
+            ErrorCode::AuthRequired
+        } else if e.is_permanent() {
+            ErrorCode::Server
+        } else {
+            ErrorCode::Offline
+        };
         coded(code, format!("SMTP: {msg}"))
     })?;
     Ok(())

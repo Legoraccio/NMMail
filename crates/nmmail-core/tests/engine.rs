@@ -487,3 +487,54 @@ async fn gmail_primary_filter_and_archive_to_all_mail() {
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn xoauth2_login_for_imap_and_smtp() {
+    use nmmail_core::imap::conn::{Credentials, connect};
+    let server = TestServer::start(Config::default()).await.unwrap();
+    let imap = ServerConfig {
+        host: "127.0.0.1".into(),
+        port: server.imap_addr().port(),
+        security: Security::None,
+    };
+    let smtp = ServerConfig {
+        host: "127.0.0.1".into(),
+        port: server.smtp_addr().port(),
+        security: Security::None,
+    };
+    let good = Credentials::OAuth2 {
+        user: USER.into(),
+        access_token: "test-token".into(),
+    };
+    let (mut session, caps) = connect(&imap, &good).await.unwrap();
+    assert!(caps.idle && caps.mv);
+    session.logout().await.unwrap();
+
+    let bad = Credentials::OAuth2 {
+        user: USER.into(),
+        access_token: "expired".into(),
+    };
+    let err = connect(&imap, &bad).await.unwrap_err();
+    assert_eq!(
+        nmmail_core::error::code_of(&err),
+        nmmail_core::error::ErrorCode::AuthRequired
+    );
+
+    nmmail_core::smtp::send(
+        &smtp,
+        &good,
+        USER,
+        &[USER.to_string()],
+        &mail("Via XOAUTH2", "ok"),
+    )
+    .await
+    .unwrap();
+    assert_eq!(server.messages(USER, "INBOX").len(), 1);
+    let err = nmmail_core::smtp::send(&smtp, &bad, USER, &[USER.to_string()], &mail("x", "y"))
+        .await
+        .unwrap_err();
+    assert_eq!(
+        nmmail_core::error::code_of(&err),
+        nmmail_core::error::ErrorCode::AuthRequired
+    );
+}
