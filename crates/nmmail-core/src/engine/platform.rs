@@ -45,6 +45,10 @@ pub trait Platform: Send + Sync + 'static {
     /// Brings the UI to the front (launching it if needed), optionally opening a message.
     /// `ui_connected` tells whether a UI client is currently attached to the daemon.
     fn show_ui(&self, message_id: Option<MessageId>, ui_connected: bool);
+    /// Whether the OS lets us show notifications (diagnostics / test button).
+    fn notification_status(&self) -> String {
+        "unsupported".into()
+    }
     /// Process memory (private bytes) for diagnostics.
     fn memory_bytes(&self) -> u64 {
         0

@@ -23,7 +23,8 @@ mail-parser = "1"
 mail-builder = "2"
 
 [profile.release]
-opt-level = 3
+# The daemon is I/O bound: optimize for size (smaller binary, fewer pages touched).
+opt-level = "s"
 lto = "fat"
 codegen-units = 1
 strip = true

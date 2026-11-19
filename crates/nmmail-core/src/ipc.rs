@@ -286,6 +286,7 @@ pub async fn dispatch(engine: &Engine, method: &str, params: &Value) -> Result<V
             engine.pause_notifications(a.until)?;
             json!({})
         }
+        "notifications.test" => json!({ "status": engine.test_notification() }),
         "activate" => {
             let a: ActivateParams = p(params)?;
             engine.activate(&a.uri).await?;
@@ -401,7 +402,15 @@ where
         let engine = engine.clone();
         let tx = tx.clone();
         tokio::spawn(async move {
-            let resp = match dispatch(&engine, &req.method, &req.params).await {
+            use futures::FutureExt as _;
+            let res = std::panic::AssertUnwindSafe(dispatch(&engine, &req.method, &req.params))
+                .catch_unwind()
+                .await
+                .unwrap_or_else(|_| {
+                    tracing::error!(method = %req.method, "request handler panicked");
+                    Err(anyhow::anyhow!("internal error"))
+                });
+            let resp = match res {
                 Ok(result) => json!({ "id": req.id, "result": result }),
                 Err(e) => {
                     debug!(method = %req.method, "request failed: {e:#}");

@@ -12,6 +12,9 @@ use crate::platform;
 
 pub fn run(background: bool) -> ExitCode {
     crate::logging::init();
+    std::panic::set_hook(Box::new(|info| {
+        tracing::error!("panic: {info}");
+    }));
     platform::prepare_process();
     let rt = match tokio::runtime::Builder::new_current_thread()
         .enable_all()

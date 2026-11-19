@@ -134,11 +134,42 @@ fn icon_png() -> Option<String> {
 /// Registers (or removes) protocol handler + notification identity.
 pub fn register(enable: bool) -> Result<()> {
     if enable {
-        registry::register_integration(&exe_path().to_string_lossy(), icon_png().as_deref())
+        registry::register_integration(&exe_path().to_string_lossy(), icon_png().as_deref())?;
+        // Only an installed UI can handle mailto: links.
+        let ui = exe_path().with_file_name("NMMail.exe");
+        if ui.exists() {
+            registry::register_mailto(&ui.to_string_lossy())?;
+        }
+        Ok(())
     } else {
         registry::unregister_integration();
         Ok(())
     }
+}
+
+/// `nmmaild --test-notification`: shows a sample toast in-process and reports status.
+pub fn test_notification_cli() -> String {
+    prepare_process();
+    let _ = register(true);
+    let n = Notification {
+        account_id: 0,
+        account_email: "NM Mail".into(),
+        account_name: "NM Mail".into(),
+        items: vec![nmmail_core::NotifyItem {
+            message_id: 0,
+            from_name: "NM Mail".into(),
+            from_address: String::new(),
+            subject: "Notifica di prova".into(),
+            snippet: "Le nuove mail compariranno così, all'istante.".into(),
+        }],
+        total: 1,
+        sound: false,
+        show_preview: true,
+        language: "system".into(),
+    };
+    toast::show(&n, system_lang());
+    std::thread::sleep(Duration::from_millis(800));
+    toast::status()
 }
 
 pub fn spawn_daemon() -> Result<()> {
@@ -375,6 +406,10 @@ impl Platform for NativePlatform {
         if let Err(e) = cmd.spawn() {
             warn!("cannot start UI {}: {e}", ui.display());
         }
+    }
+
+    fn notification_status(&self) -> String {
+        toast::status()
     }
 
     fn memory_bytes(&self) -> u64 {

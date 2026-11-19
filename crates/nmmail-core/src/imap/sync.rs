@@ -73,13 +73,10 @@ pub fn imap_date(ms: i64) -> String {
     dt.format("%-d-%b-%Y").to_string()
 }
 
-fn quote(s: &str) -> String {
-    format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""))
-}
-
-/// Mailbox name as sent on the wire (modified UTF-7, quoted).
+/// Mailbox name as passed to async-imap, which quotes it itself. Names are
+/// kept exactly as LIST returned them (already modified UTF-7).
 pub fn wire_name(name: &str) -> String {
-    quote(name)
+    name.to_string()
 }
 
 pub fn flags_of(f: &Fetch) -> i64 {
@@ -186,8 +183,10 @@ pub async fn list_folders(session: &mut Session) -> Result<Vec<RemoteFolder>> {
                 _ => {}
             }
         }
-        let name = n.name().to_string();
+        let mut name = n.name().to_string();
         if name.eq_ignore_ascii_case("INBOX") {
+            // INBOX is case-insensitive (RFC 3501): keep one canonical spelling.
+            name = "INBOX".to_string();
             role = Some(FolderRole::Inbox);
         }
         if role.is_none() {

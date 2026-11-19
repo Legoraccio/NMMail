@@ -115,7 +115,44 @@ pub fn register_integration(exe: &str, icon_png: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+/// Offers NM Mail as a `mailto:` handler. The user picks it in Settings →
+/// Default apps (Windows does not let apps take over defaults silently).
+pub fn register_mailto(ui_exe: &str) -> Result<()> {
+    let client = r"Software\Clients\Mail\NM Mail";
+    let caps = format!(r"{client}\Capabilities");
+    set_string(client, None, "NM Mail")?;
+    set_string(&caps, Some("ApplicationName"), "NM Mail")?;
+    set_string(
+        &caps,
+        Some("ApplicationDescription"),
+        "Client di posta leggero con notifiche istantanee",
+    )?;
+    set_string(
+        &format!(r"{caps}\URLAssociations"),
+        Some("mailto"),
+        "NMMail.Url.mailto",
+    )?;
+    set_string(r"Software\RegisteredApplications", Some("NM Mail"), &caps)?;
+    let prog = r"Software\Classes\NMMail.Url.mailto";
+    set_string(prog, None, "URL:MailTo Protocol")?;
+    set_string(prog, Some("URL Protocol"), "")?;
+    set_string(
+        &format!(r"{prog}\DefaultIcon"),
+        None,
+        &format!("\"{ui_exe}\",0"),
+    )?;
+    set_string(
+        &format!(r"{prog}\shell\open\command"),
+        None,
+        &format!("\"{ui_exe}\" --compose \"%1\""),
+    )?;
+    Ok(())
+}
+
 pub fn unregister_integration() {
+    delete_tree(r"Software\Clients\Mail\NM Mail");
+    delete_tree(r"Software\Classes\NMMail.Url.mailto");
+    delete_value(r"Software\RegisteredApplications", "NM Mail");
     delete_tree(r"Software\Classes\nmmail");
     delete_tree(&format!(r"Software\Classes\AppUserModelId\{AUMID}"));
     delete_value(RUN_KEY, RUN_VALUE);

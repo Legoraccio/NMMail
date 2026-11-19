@@ -6,6 +6,7 @@
 //! * `nmmaild --activate <nmmail:uri>` — forward a notification click to the
 //!   running daemon (starting it if needed) and exit.
 //! * `nmmaild --show` — ask the running daemon to show the UI.
+//! * `nmmaild --test-notification` — show a sample toast and print the OS status.
 //! * `nmmaild --register` / `--unregister` — per-user OS integration.
 
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
@@ -31,6 +32,10 @@ fn main() -> ExitCode {
     {
         let uri = args.get(pos + 1).cloned().unwrap_or_default();
         return client::activate(&uri);
+    }
+    if flag("--test-notification") {
+        println!("{}", platform::test_notification_cli());
+        return ExitCode::SUCCESS;
     }
     if flag("--show") {
         return client::show();

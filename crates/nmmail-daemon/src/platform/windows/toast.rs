@@ -7,7 +7,9 @@ use nmmail_core::Notification;
 use nmmail_core::model::{AccountId, MessageId};
 use tracing::warn;
 use windows::Data::Xml::Dom::XmlDocument;
-use windows::UI::Notifications::{ToastNotification, ToastNotificationManager};
+use windows::UI::Notifications::{
+    NotificationSetting, ToastNotification, ToastNotificationManager,
+};
 use windows::core::HSTRING;
 
 use super::registry::AUMID;
@@ -140,6 +142,29 @@ pub fn show(n: &Notification, lang: Lang) {
     if let Err(e) = result {
         warn!("toast failed: {e}");
     }
+}
+
+/// Notification permission for our AUMID plus how many toasts are in Action Center.
+pub fn status() -> String {
+    let notifier = match ToastNotificationManager::CreateToastNotifierWithId(&HSTRING::from(AUMID))
+    {
+        Ok(n) => n,
+        Err(e) => return format!("error: {e}"),
+    };
+    let setting = match notifier.Setting() {
+        Ok(NotificationSetting::Enabled) => "enabled",
+        Ok(NotificationSetting::DisabledForApplication) => "disabledForApp",
+        Ok(NotificationSetting::DisabledForUser) => "disabledForUser",
+        Ok(NotificationSetting::DisabledByGroupPolicy) => "disabledByPolicy",
+        Ok(NotificationSetting::DisabledByManifest) => "disabledByManifest",
+        Ok(_) => "unknown",
+        Err(e) => return format!("error: {e}"),
+    };
+    let shown = ToastNotificationManager::History()
+        .and_then(|h| h.GetHistoryWithId(&HSTRING::from(AUMID)))
+        .and_then(|v| v.Size())
+        .unwrap_or(0);
+    format!("{setting}; actionCenter={shown}")
 }
 
 pub fn retract(account_id: AccountId, ids: &[MessageId]) {

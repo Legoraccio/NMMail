@@ -31,6 +31,10 @@ pub fn register(_enable: bool) -> Result<()> {
     Ok(())
 }
 
+pub fn test_notification_cli() -> String {
+    "unsupported".into()
+}
+
 pub fn spawn_daemon() -> Result<()> {
     std::process::Command::new(std::env::current_exe()?)
         .arg("--background")

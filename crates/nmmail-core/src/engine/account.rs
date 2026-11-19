@@ -84,7 +84,7 @@ pub(super) async fn watcher(inner: Arc<Inner>, account_id: AccountId, wake: Arc<
                         inner.set_status(account_id, AccountState::AuthRequired, Some(msg));
                         Duration::from_secs(15 * 60)
                     }
-                    ErrorCode::NotFound => {
+                    ErrorCode::NotFound if inner.store.account(account_id).is_err() => {
                         // Account removed underneath us.
                         return;
                     }
@@ -131,9 +131,6 @@ async fn watch_once(
     backoff.reset();
     // Folder list + flags of other folders are the worker's job.
     inner.job(account_id, Job::RefreshFolders, None);
-    let inbox = inner
-        .store
-        .ensure_folder(account_id, "INBOX", Some(FolderRole::Inbox))?;
 
     let mut mode = SyncMode::Full;
     let mut last_full = Instant::now();
@@ -145,7 +142,11 @@ async fn watch_once(
             last_full = Instant::now();
         }
         let cache_days = inner.settings.read().unwrap().cache_days;
-        let folder = inner.store.folder_state(inbox.id)?;
+        // Re-resolved every round: the folder list refresh may have recreated it.
+        let folder = inner
+            .store
+            .ensure_folder(account_id, "INBOX", Some(FolderRole::Inbox))?;
+        let inbox = folder.clone();
         let out =
             sync::sync_folder(&mut session, &inner.store, &folder, caps, cache_days, mode).await?;
         inner.set_status(account_id, AccountState::Online, None);
@@ -216,8 +217,8 @@ async fn watch_once(
             };
             drop(stop);
             match w {
-                Wakeup::Server(r) => (Wakeup::Manual, Some(r)),
                 Wakeup::Reconnect => return Ok(Exit::Reconnect),
+                Wakeup::Server(r) => (Wakeup::Server(Ok(IdleResponse::ManualInterrupt)), Some(r)),
                 other => {
                     // Interrupted locally: let the idle future observe the stop.
                     let _ = tokio::time::timeout(Duration::from_secs(2), fut.as_mut()).await;
@@ -226,26 +227,21 @@ async fn watch_once(
             }
         };
         let mut changes = Changes::default();
-        let mut timed_out = false;
         if let Some(r) = resp {
             match r? {
                 IdleResponse::NewData(data) => changes.merge(sync::classify(data.parsed())),
-                IdleResponse::Timeout => timed_out = true,
-                IdleResponse::ManualInterrupt => {}
+                IdleResponse::Timeout | IdleResponse::ManualInterrupt => {}
             }
         }
         // DONE doubles as a liveness probe.
         session = tmo_for(DONE_TIMEOUT, handle.done()).await?;
         changes.merge(sync::drain_unsolicited(&mut session));
-        mode = if matches!(wakeup, Wakeup::Health) && !changes.any() {
-            SyncMode::NewOnly
-        } else if changes.any() {
-            mode_for(changes)
-        } else if timed_out {
-            SyncMode::NewOnly
-        } else {
-            // Manual wake (user pressed "sync now" / opened INBOX).
-            SyncMode::Full
+        mode = match wakeup {
+            // User asked for a refresh ("sync now", INBOX opened): reconcile everything.
+            Wakeup::Manual => SyncMode::Full,
+            // Server push, renewal timeout or network/health check.
+            _ if changes.any() => mode_for(changes),
+            _ => SyncMode::NewOnly,
         };
     }
 }
@@ -268,8 +264,10 @@ async fn on_new_mail(
     uids: &[u32],
 ) {
     info!(account_id = account.id, count = ids.len(), "new mail");
+    // Preferences may have changed since the watcher connected.
+    let fresh = inner.store.account(account.id).ok();
+    let account = fresh.as_ref().unwrap_or(account);
     let summaries = inner.store.summaries(ids).unwrap_or_default();
-    // Map uid -> id via the summaries' order is unreliable: query rows.
     let mut want: Vec<(MessageId, u32)> = Vec::new();
     for s in summaries.iter().take(PREFETCH_COUNT) {
         if s.size <= PREFETCH_MAX
@@ -484,8 +482,30 @@ async fn select(c: &mut Conn, name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Runs a job, reconnecting once if a reused connection turned out dead.
+/// Runs a job; a panic is contained (and the connection dropped) instead of
+/// killing the worker.
 async fn run_job(
+    inner: &Inner,
+    account_id: AccountId,
+    conn: &mut Option<Conn>,
+    job: &Job,
+) -> Result<JobOutput> {
+    use futures::FutureExt as _;
+    let res = std::panic::AssertUnwindSafe(run_job_retrying(inner, account_id, conn, job))
+        .catch_unwind()
+        .await;
+    match res {
+        Ok(r) => r,
+        Err(_) => {
+            tracing::error!(account_id, ?job, "worker job panicked");
+            *conn = None;
+            Err(anyhow::anyhow!("internal error while running {job:?}"))
+        }
+    }
+}
+
+/// Runs a job, reconnecting once if a reused connection turned out dead.
+async fn run_job_retrying(
     inner: &Inner,
     account_id: AccountId,
     conn: &mut Option<Conn>,

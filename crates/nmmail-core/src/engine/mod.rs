@@ -144,7 +144,10 @@ impl Engine {
         for a in engine.inner.store.accounts()? {
             engine.inner.start_account(a.id);
         }
-        tokio::spawn(account::outbox_task(engine.inner.clone()));
+        let me = engine.inner.clone();
+        tokio::spawn(supervised("outbox", move || {
+            account::outbox_task(me.clone())
+        }));
         tokio::spawn(maintenance_task(engine.inner.clone()));
         tokio::spawn(clock_jump_task(engine.inner.clone()));
         engine.inner.refresh_unread();
@@ -363,7 +366,7 @@ impl Engine {
         let (mut session, _) = conn::connect(&imap, &creds).await?;
         let _ = conn::tmo_for(Duration::from_secs(5), session.logout()).await;
         let cfg = self.inner.store.insert_account(&NewAccount {
-            provider: Provider::Imap,
+            provider: provider_for_host(&imap.host),
             email: email.clone(),
             display_name: if p.display_name.trim().is_empty() {
                 email.clone()
@@ -606,10 +609,14 @@ impl Engine {
     async fn move_to_role(&self, ids: &[MessageId], role: FolderRole) -> Result<()> {
         let groups = self.group(ids)?;
         for ((account_id, folder_id), (row, uids, mids)) in groups {
-            let account = self.inner.store.account(account_id)?;
+            if self.inner.store.folder_by_role(account_id, role)?.is_none() {
+                // The folder list may not have been downloaded yet.
+                let _ = self.inner.request(account_id, Job::RefreshFolders).await;
+            }
             let target = match self.inner.store.folder_by_role(account_id, role)? {
                 Some(t) => Some(t),
-                None if role == FolderRole::Archive && account.provider == Provider::Gmail => self
+                // Gmail (also when added as plain IMAP): archiving = leaving INBOX for "All Mail".
+                None if role == FolderRole::Archive => self
                     .inner
                     .store
                     .folder_by_role(account_id, FolderRole::All)?,
@@ -845,6 +852,39 @@ impl Engine {
         self.set_settings(&serde_json::json!({ "quietUntil": until }))
     }
 
+    /// Shows a sample notification and reports whether the OS allows them.
+    pub fn test_notification(&self) -> String {
+        let s = self.settings();
+        let en = s.language == "en";
+        self.inner.platform.notify(&Notification {
+            account_id: 0,
+            account_email: "NM Mail".into(),
+            account_name: "NM Mail".into(),
+            items: vec![NotifyItem {
+                message_id: 0,
+                from_name: "NM Mail".into(),
+                from_address: String::new(),
+                subject: if en {
+                    "Test notification"
+                } else {
+                    "Notifica di prova"
+                }
+                .into(),
+                snippet: if en {
+                    "New mail will appear like this, instantly."
+                } else {
+                    "Le nuove mail compariranno così, all'istante."
+                }
+                .into(),
+            }],
+            total: 1,
+            sound: s.notification_sound,
+            show_preview: true,
+            language: s.language.clone(),
+        });
+        self.inner.platform.notification_status()
+    }
+
     /// Makes sure the OS autostart entry matches the setting (called at startup).
     pub fn apply_autostart(&self) {
         let s = self.settings();
@@ -884,7 +924,10 @@ impl Inner {
     fn start_account(self: &Arc<Self>, id: AccountId) {
         let (tx, rx) = mpsc::unbounded_channel();
         let wake = Arc::new(Notify::new());
-        let watcher = tokio::spawn(account::watcher(self.clone(), id, wake.clone()));
+        let (me, w) = (self.clone(), wake.clone());
+        let watcher = tokio::spawn(supervised("watcher", move || {
+            account::watcher(me.clone(), id, w.clone())
+        }));
         let worker = tokio::spawn(account::worker(self.clone(), id, rx));
         self.accounts.lock().unwrap().insert(
             id,
@@ -1036,11 +1079,21 @@ impl Inner {
         candidates: &[MessageId],
         allowed: Option<&HashSet<MessageId>>,
     ) {
-        let settings = self.settings.read().unwrap().clone();
+        self.show_notification(account, candidates, allowed);
         let _ = self.events.send(Event::MailNew {
             account_id: account.id,
             message_ids: candidates.to_vec(),
         });
+    }
+
+    /// Applies the notification policy and shows a toast if appropriate.
+    fn show_notification(
+        &self,
+        account: &AccountConfig,
+        candidates: &[MessageId],
+        allowed: Option<&HashSet<MessageId>>,
+    ) {
+        let settings = self.settings.read().unwrap().clone();
         if !settings.notifications_enabled || !account.notify || settings.is_quiet(now_ms()) {
             return;
         }
@@ -1128,6 +1181,41 @@ impl Inner {
                 },
                 None,
             );
+        }
+    }
+}
+
+/// Recognizes well-known providers configured as plain IMAP (e.g. Gmail with an
+/// app password), so provider-specific behaviour still applies.
+fn provider_for_host(host: &str) -> Provider {
+    let h = host.trim().to_ascii_lowercase();
+    if h.ends_with("gmail.com") || h.ends_with("googlemail.com") {
+        Provider::Gmail
+    } else if h.ends_with("outlook.office365.com")
+        || h.ends_with("outlook.com")
+        || h.ends_with("office365.com")
+    {
+        Provider::Outlook
+    } else {
+        Provider::Imap
+    }
+}
+
+/// Runs a long-lived task, restarting it if it ever panics: a bug must never
+/// silently stop push delivery for an account.
+async fn supervised<F, Fut>(name: &'static str, make: F)
+where
+    F: Fn() -> Fut,
+    Fut: std::future::Future<Output = ()>,
+{
+    use futures::FutureExt as _;
+    loop {
+        match std::panic::AssertUnwindSafe(make()).catch_unwind().await {
+            Ok(()) => return,
+            Err(_) => {
+                tracing::error!(task = name, "task panicked; restarting in 5 s");
+                tokio::time::sleep(Duration::from_secs(5)).await;
+            }
         }
     }
 }
