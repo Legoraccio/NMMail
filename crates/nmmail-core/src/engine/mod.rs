@@ -66,6 +66,7 @@ pub(crate) struct Inner {
     ui_clients: AtomicUsize,
     started: Instant,
     last_unread: Mutex<Option<(u32, Option<String>)>>,
+    shutdown: Notify,
 }
 
 /// Cheap, cloneable handle to the engine.
@@ -130,6 +131,7 @@ impl Engine {
             ui_clients: AtomicUsize::new(0),
             started: Instant::now(),
             last_unread: Mutex::new(None),
+            shutdown: Notify::new(),
         });
         let engine = Engine { inner };
         for a in engine.inner.store.accounts()? {
@@ -184,10 +186,21 @@ impl Engine {
     /// Shows the UI (from tray / notification click).
     pub fn show_ui(&self, message_id: Option<MessageId>) {
         let connected = self.ui_connected();
+        // The platform first grants foreground rights / launches the UI process.
+        self.inner.platform.show_ui(message_id, connected);
         if connected {
             let _ = self.inner.events.send(Event::UiShow { message_id });
         }
-        self.inner.platform.show_ui(message_id, connected);
+    }
+
+    /// Asks the daemon to exit (tray "Exit" or `daemon.shutdown`).
+    pub fn request_shutdown(&self) {
+        self.inner.shutdown.notify_one();
+    }
+
+    /// Resolves when shutdown was requested.
+    pub async fn shutdown_requested(&self) {
+        self.inner.shutdown.notified().await;
     }
 
     /// Handles a `nmmail:` URI (notification clicks and buttons).
@@ -717,7 +730,7 @@ impl Engine {
         let old = self.settings();
         let new = old.merged(patch)?;
         if new.autostart != old.autostart
-            && let Err(e) = self.inner.platform.set_autostart(new.autostart)
+            && let Err(e) = self.inner.platform.set_autostart(new.autostart, true)
         {
             warn!("autostart: {e:#}");
         }
@@ -741,7 +754,7 @@ impl Engine {
     /// Makes sure the OS autostart entry matches the setting (called at startup).
     pub fn apply_autostart(&self) {
         let s = self.settings();
-        if let Err(e) = self.inner.platform.set_autostart(s.autostart) {
+        if let Err(e) = self.inner.platform.set_autostart(s.autostart, false) {
             warn!("autostart: {e:#}");
         }
     }
@@ -959,6 +972,7 @@ impl Inner {
             total,
             sound: settings.notification_sound,
             show_preview: settings.show_preview,
+            language: settings.language.clone(),
         });
     }
 

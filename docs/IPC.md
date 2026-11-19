@@ -34,7 +34,8 @@ Evento (demone → client, non sollecitato):
 Codici di errore: `badRequest`, `notFound`, `authRequired`, `offline`, `cancelled`,
 `server`, `internal`.
 
-Il primo messaggio del client deve essere `hello`.
+Il primo messaggio del client deve essere `hello`. La UI usa `client: "ui"`: così il
+demone sa che c'è una finestra a cui inviare `ui.show` invece di lanciarne una nuova.
 
 ## Tipi
 
@@ -122,12 +123,14 @@ type Settings = {
 | `messages.search` | `{query, accountId?, limit?}` | `{messages: MessageSummary[]}` |
 | `attachments.save` | `{messageId, partId, path}` | `{path}` |
 | `contacts.suggest` | `{prefix, limit?}` | `{contacts: Addr[]}` |
-| `compose.prepare` | `{mode: "reply" \| "replyAll" \| "forward", messageId}` | `{accountId, to, cc, subject, html, text, inReplyTo, references, attachments: {messageId, partId, filename, size}[]}` |
-| `compose.send` | `{accountId, to, cc, bcc, subject, html, text, attachments: string[] (path), forwardAttachments?: {messageId, partId}[], inReplyTo?, references?, replyToMessageId?}` | `{outboxId}` |
+| `compose.prepare` | `{mode: "reply" \| "replyAll" \| "forward", messageId, lang?: "it" \| "en"}` | `{accountId, to, cc, subject, html, text, inReplyTo, references, attachments: {messageId, partId, filename, size}[]}` |
+| `compose.send` | `{accountId, to, cc, bcc, subject, html, text, attachments: string[] (path), forwardAttachments?: {messageId, partId}[], inReplyTo?, references?, replyToMessageId?}` | `{outboxId, queued}` — invio immediato; se offline `queued: true` e il messaggio parte appena torna la rete (`outbox.sent`). Errori permanenti (indirizzo rifiutato…) arrivano come errore della richiesta |
 | `settings.get` | – | `{settings: Settings}` |
 | `settings.set` | `Partial<Settings>` | `{settings: Settings}` |
 | `sync.now` | `{accountId?}` | `{}` |
 | `notifications.pause` | `{until: number \| null}` | `{}` |
+| `ui.show` | `{messageId?}` | `{}` — porta la UI in primo piano (avviandola se serve) |
+| `activate` | `{uri}` | `{}` — uso interno: click sulle notifiche (`nmmail://open?msg=…`, `markread`, `archive`, `delete`) |
 
 ## Eventi
 

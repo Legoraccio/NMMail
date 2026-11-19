@@ -168,6 +168,10 @@ pub async fn dispatch(engine: &Engine, method: &str, params: &Value) -> Result<V
     Ok(match method {
         "hello" => json!({ "daemonVersion": env!("CARGO_PKG_VERSION"), "protocol": PROTOCOL_VERSION }),
         "daemon.status" => serde_json::to_value(engine.status()?)?,
+        "daemon.shutdown" => {
+            engine.request_shutdown();
+            json!({})
+        }
         "accounts.list" => json!({ "accounts": engine.accounts()? }),
         "accounts.addOAuth" => {
             let a: ProviderParam = p(params)?;

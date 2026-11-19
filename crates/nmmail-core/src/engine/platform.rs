@@ -26,6 +26,8 @@ pub struct Notification {
     pub total: usize,
     pub sound: bool,
     pub show_preview: bool,
+    /// UI language setting: "system", "it" or "en".
+    pub language: String,
 }
 
 pub trait Platform: Send + Sync + 'static {
@@ -37,8 +39,9 @@ pub trait Platform: Send + Sync + 'static {
     fn retract(&self, account_id: AccountId, ids: &[MessageId]);
     /// Total unread count across inboxes (tray badge / tooltip).
     fn unread_changed(&self, total: u32, problem: Option<&str>);
-    /// Enables/disables start at login.
-    fn set_autostart(&self, enabled: bool) -> Result<()>;
+    /// Enables/disables start at login. `user_initiated` is true when the user
+    /// just changed the setting (as opposed to the startup consistency check).
+    fn set_autostart(&self, enabled: bool, user_initiated: bool) -> Result<()>;
     /// Brings the UI to the front (launching it if needed), optionally opening a message.
     /// `ui_connected` tells whether a UI client is currently attached to the daemon.
     fn show_ui(&self, message_id: Option<MessageId>, ui_connected: bool);
@@ -56,7 +59,7 @@ impl Platform for NullPlatform {
     fn notify(&self, _n: &Notification) {}
     fn retract(&self, _a: AccountId, _ids: &[MessageId]) {}
     fn unread_changed(&self, _total: u32, _problem: Option<&str>) {}
-    fn set_autostart(&self, _enabled: bool) -> Result<()> {
+    fn set_autostart(&self, _enabled: bool, _user: bool) -> Result<()> {
         Ok(())
     }
     fn show_ui(&self, _m: Option<MessageId>, _c: bool) {}
