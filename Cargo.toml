@@ -12,7 +12,6 @@ publish = false
 [workspace.dependencies]
 nmmail-core = { path = "crates/nmmail-core" }
 anyhow = "1"
-thiserror = "2"
 tokio = { version = "1.54", default-features = false }
 futures = { version = "0.3", default-features = false, features = ["std", "async-await"] }
 serde = { version = "1", features = ["derive"] }

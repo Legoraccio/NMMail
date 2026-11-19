@@ -9,8 +9,7 @@ publish.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-thiserror.workspace = true
-tokio = { workspace = true, features = ["rt", "net", "time", "sync", "macros", "io-util"] }
+tokio = { workspace = true, features = ["rt", "net", "time", "sync", "macros", "io-util", "fs"] }
 futures.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -23,9 +22,8 @@ tokio-rustls = { version = "0.26", default-features = false, features = ["ring",
 rustls-platform-verifier = "0.7"
 rusqlite = { version = "0.43", features = ["bundled"] }
 ammonia = "4"
-lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls", "rustls-platform-verifier", "ring", "builder"] }
+lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls", "rustls-platform-verifier", "ring"] }
 ureq = { version = "3", default-features = false, features = ["rustls", "platform-verifier", "json"] }
-keyring = "4"
 base64 = "0.23"
 sha2 = "0.11"
 rand = "0.10"
@@ -36,6 +34,9 @@ dirs = "7"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 html-escape = "0.3"
 mime_guess = "2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security_Credentials"] }
 
 [dev-dependencies]
 tempfile = "3"
