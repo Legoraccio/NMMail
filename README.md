@@ -10,6 +10,23 @@ background di pochi MB.
 | `NMMail.exe` | WinUI 3, .NET 10 Native AOT | Interfaccia, aperta solo quando serve |
 | `nmmail-core` | Rust, cross-platform | Sync, storage, OAuth, SMTP, MIME, protocollo IPC (pronto per macOS/Linux) |
 
+![NM Mail — lettura](docs/img/lettura.png)
+
+## Funzionalità
+
+- Gmail, Outlook/Microsoft 365 (OAuth, nessuna password salvata) e qualsiasi IMAP/SMTP.
+- Posta in arrivo unificata, cartelle con contatori, ricerca istantanea full-text offline.
+- Lettore sicuro: immagini remote bloccate finché non le consenti (niente tracciamento),
+  script disattivati, anteprima del vero indirizzo dei link.
+- Rispondi, rispondi a tutti, inoltra (con allegati), editor ricco, completamento indirizzi,
+  invio anche offline (coda automatica), gestore dei link `mailto:`.
+- Archivia, elimina, sposta, letto/non letto, contrassegna, selezione multipla, scorciatoie.
+- Tema chiaro/scuro di sistema con Mica, interfaccia in italiano e inglese.
+
+| Composizione | Impostazioni | Tema chiaro |
+|---|---|---|
+| ![](docs/img/composizione.png) | ![](docs/img/impostazioni.png) | ![](docs/img/tema-chiaro.png) |
+
 ## Perché non perde mai una mail
 
 - **Una connessione IDLE dedicata per account** su Posta in arrivo: il server spinge la
@@ -25,9 +42,9 @@ background di pochi MB.
 
 ## Leggerezza
 
-- Demone: ~2,5 MB di memoria privata a riposo, 0% CPU (nessun polling), modalità
-  *Efficienza* (EcoQoS) di Windows 11, trim periodico del working set.
-- La finestra è un processo separato: chiusa = 0 MB.
+- Demone: ~3,5 MB di memoria privata con 2 account in ascolto, 0,16 s di CPU in un'ora
+  (nessun polling), modalità *Efficienza* (EcoQoS) di Windows 11, binario di 6,9 MB.
+- La finestra è un processo separato (Native AOT, primo frame in ~300 ms): chiusa = 0 MB.
 - Database locale SQLite (WAL + ricerca full-text FTS5), cache degli ultimi 90 giorni.
 
 ## Documentazione
@@ -42,11 +59,14 @@ Requisiti: Windows 10 1809+ / 11, Rust stable, Visual Studio 2022/2026 con strum
 .NET 10 SDK.
 
 ```powershell
+.\scripts\dev-demo.ps1                 # prova completa: server di test + demone + UI (-Stop per chiudere)
 cargo test --workspace                 # test unitari + integrazione (server IMAP finto)
 cargo run -p nmmail-testserver         # server IMAP 127.0.0.1:1143 + SMTP 127.0.0.1:1025
 cargo run -p nmmail-daemon             # demone (build di debug: non si registra all'avvio)
 dotnet build apps/windows/NMMail/NMMail.csproj -c Debug -p:Platform=x64
 ```
+
+`NMMail.exe --demo` apre l'interfaccia con dati finti, senza demone.
 
 Il server di test crea l'utente `test@nmmail.local` / `test` con una casella di esempio;
 `--auto-deliver 30` consegna una mail ogni 30 secondi per provare le notifiche. Nell'app:

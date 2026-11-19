@@ -16,6 +16,15 @@ param(
     [switch] $Stop
 )
 $ErrorActionPreference = 'Stop'
+
+# Runs a native command; PowerShell 5.1 must not turn its stderr progress into errors.
+function Invoke-Native([scriptblock] $Command, [string] $What) {
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { & $Command 2>&1 | ForEach-Object { "$_" } } finally { $ErrorActionPreference = $previous }
+    if ($LASTEXITCODE -ne 0) { throw "$What failed (exit code $LASTEXITCODE)" }
+}
+
 $root = Split-Path -Parent $PSScriptRoot
 $data = Join-Path $env:TEMP 'NMMail-demo'
 $cargo = Join-Path $env:USERPROFILE '.cargo\bin\cargo.exe'
@@ -49,11 +58,10 @@ if ($Stop) {
 }
 
 Write-Host '==> Build (Rust)' -ForegroundColor Cyan
-& $cargo build -p nmmail-testserver -p nmmail-daemon
-if ($LASTEXITCODE -ne 0) { throw 'cargo build failed' }
+Invoke-Native { & $cargo build -p nmmail-testserver -p nmmail-daemon } 'cargo build'
 Write-Host '==> Build (UI)' -ForegroundColor Cyan
-dotnet build (Join-Path $root 'apps\windows\NMMail\NMMail.csproj') -c Debug -p:Platform=x64 -v q -nologo
-if ($LASTEXITCODE -ne 0) { throw 'dotnet build failed' }
+$csproj = Join-Path $root 'apps\windows\NMMail\NMMail.csproj'
+Invoke-Native { dotnet build $csproj -c Debug -p:Platform=x64 -v q -nologo } 'dotnet build'
 $ui = Get-ChildItem (Join-Path $root 'apps\windows\NMMail\bin') -Recurse -Filter NMMail.exe |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $ui) { throw 'NMMail.exe non trovato' }
