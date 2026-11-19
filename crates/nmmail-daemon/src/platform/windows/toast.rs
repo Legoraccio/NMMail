@@ -63,7 +63,11 @@ pub fn message_xml(n: &Notification, item: &nmmail_core::NotifyItem, lang: Lang)
             clip(&item.snippet, 200),
         )
     } else {
-        (t(lang, S::NewMail).to_string(), String::new(), String::new())
+        (
+            t(lang, S::NewMail).to_string(),
+            String::new(),
+            String::new(),
+        )
     };
     let mut texts = format!("<text hint-maxLines=\"1\">{}</text>", esc(&title));
     if !line1.is_empty() {
@@ -123,10 +127,13 @@ pub fn show(n: &Notification, lang: Lang) {
     let group = format!("acct{}", n.account_id);
     let result = if n.total <= 3 {
         // Oldest first so the newest ends on top.
-        n.items
-            .iter()
-            .rev()
-            .try_for_each(|item| show_xml(&message_xml(n, item, lang), &format!("m{}", item.message_id), &group))
+        n.items.iter().rev().try_for_each(|item| {
+            show_xml(
+                &message_xml(n, item, lang),
+                &format!("m{}", item.message_id),
+                &group,
+            )
+        })
     } else {
         show_xml(&summary_xml(n, lang), "summary", &group)
     };
@@ -175,6 +182,7 @@ mod tests {
         let doc = XmlDocument::new().unwrap();
         doc.LoadXml(&HSTRING::from(xml)).unwrap();
         let doc = XmlDocument::new().unwrap();
-        doc.LoadXml(&HSTRING::from(summary_xml(&n, Lang::En))).unwrap();
+        doc.LoadXml(&HSTRING::from(summary_xml(&n, Lang::En)))
+            .unwrap();
     }
 }

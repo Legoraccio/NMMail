@@ -25,7 +25,10 @@ fn main() -> ExitCode {
         println!("nmmaild {}", env!("CARGO_PKG_VERSION"));
         return ExitCode::SUCCESS;
     }
-    if let Some(pos) = args.iter().position(|a| a.eq_ignore_ascii_case("--activate")) {
+    if let Some(pos) = args
+        .iter()
+        .position(|a| a.eq_ignore_ascii_case("--activate"))
+    {
         let uri = args.get(pos + 1).cloned().unwrap_or_default();
         return client::activate(&uri);
     }

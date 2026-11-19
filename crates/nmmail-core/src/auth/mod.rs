@@ -101,7 +101,10 @@ impl AuthManager {
             .ok_or_else(|| coded(ErrorCode::AuthRequired, "no refresh token stored"))?;
         let client = self.client_id(a.provider);
         if client.id.is_empty() {
-            return Err(coded(ErrorCode::AuthRequired, "OAuth client ID not configured"));
+            return Err(coded(
+                ErrorCode::AuthRequired,
+                "OAuth client ID not configured",
+            ));
         }
         let t = oauth::refresh(a.provider, &client, &refresh).await?;
         if let Some(new_refresh) = &t.refresh_token

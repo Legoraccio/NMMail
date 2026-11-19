@@ -60,7 +60,15 @@ pub(super) async fn watcher(inner: Arc<Inner>, account_id: AccountId, wake: Arc<
     health_rx.borrow_and_update();
     loop {
         inner.set_status(account_id, AccountState::Connecting, None);
-        let res = watch_once(&inner, account_id, &wake, &mut backoff, &mut reconnect_rx, &mut health_rx).await;
+        let res = watch_once(
+            &inner,
+            account_id,
+            &wake,
+            &mut backoff,
+            &mut reconnect_rx,
+            &mut health_rx,
+        )
+        .await;
         let delay = match res {
             Ok(Exit::Reconnect) => {
                 backoff.reset();
@@ -113,11 +121,19 @@ async fn watch_once(
     let account = inner.store.account(account_id)?;
     let creds = inner.auth.credentials(&account).await?;
     let (mut session, caps) = conn::connect(&account.imap, &creds).await?;
-    info!(account_id, idle = caps.idle, gmail = caps.gmail, condstore = caps.condstore, "watcher connected");
+    info!(
+        account_id,
+        idle = caps.idle,
+        gmail = caps.gmail,
+        condstore = caps.condstore,
+        "watcher connected"
+    );
     backoff.reset();
     // Folder list + flags of other folders are the worker's job.
     inner.job(account_id, Job::RefreshFolders, None);
-    let inbox = inner.store.ensure_folder(account_id, "INBOX", Some(FolderRole::Inbox))?;
+    let inbox = inner
+        .store
+        .ensure_folder(account_id, "INBOX", Some(FolderRole::Inbox))?;
 
     let mut mode = SyncMode::Full;
     let mut last_full = Instant::now();
@@ -130,7 +146,8 @@ async fn watch_once(
         }
         let cache_days = inner.settings.read().unwrap().cache_days;
         let folder = inner.store.folder_state(inbox.id)?;
-        let out = sync::sync_folder(&mut session, &inner.store, &folder, caps, cache_days, mode).await?;
+        let out =
+            sync::sync_folder(&mut session, &inner.store, &folder, caps, cache_days, mode).await?;
         inner.set_status(account_id, AccountState::Online, None);
         if out.changed {
             let _ = inner.events.send(Event::MessagesChanged {
@@ -139,9 +156,24 @@ async fn watch_once(
             });
         }
         if out.initial {
-            inner.job(account_id, Job::Prefetch { folder_id: inbox.id, limit: 60 }, None);
+            inner.job(
+                account_id,
+                Job::Prefetch {
+                    folder_id: inbox.id,
+                    limit: 60,
+                },
+                None,
+            );
         } else if !out.new_ids.is_empty() {
-            on_new_mail(inner, &account, &mut session, caps, &out.new_ids, &out.new_uids).await;
+            on_new_mail(
+                inner,
+                &account,
+                &mut session,
+                caps,
+                &out.new_ids,
+                &out.new_uids,
+            )
+            .await;
         }
         inner.refresh_unread();
 
@@ -259,25 +291,26 @@ async fn on_new_mail(
             Err(e) => debug!("prefetch failed: {e:#}"),
         }
     }
-    let allowed: Option<HashSet<MessageId>> = if account.notify_filter == NotifyFilter::Primary && caps.gmail {
-        match sync::gmail_primary(session, uids).await {
-            Ok(primary) => Some(
-                ids.iter()
-                    .filter(|id| {
-                        inner
-                            .store
-                            .message_row(**id)
-                            .map(|r| primary.contains(&r.uid))
-                            .unwrap_or(true)
-                    })
-                    .copied()
-                    .collect(),
-            ),
-            Err(_) => None,
-        }
-    } else {
-        None
-    };
+    let allowed: Option<HashSet<MessageId>> =
+        if account.notify_filter == NotifyFilter::Primary && caps.gmail {
+            match sync::gmail_primary(session, uids).await {
+                Ok(primary) => Some(
+                    ids.iter()
+                        .filter(|id| {
+                            inner
+                                .store
+                                .message_row(**id)
+                                .map(|r| primary.contains(&r.uid))
+                                .unwrap_or(true)
+                        })
+                        .copied()
+                        .collect(),
+                ),
+                Err(_) => None,
+            }
+        } else {
+            None
+        };
     inner.notify_new(account, ids, allowed.as_ref());
 }
 
@@ -334,7 +367,10 @@ pub(super) enum Job {
 impl Job {
     /// Jobs that must eventually reach the server even if we are offline now.
     fn must_retry(&self) -> bool {
-        matches!(self, Job::Flags { .. } | Job::Move { .. } | Job::Expunge { .. } | Job::Append { .. })
+        matches!(
+            self,
+            Job::Flags { .. } | Job::Move { .. } | Job::Expunge { .. } | Job::Append { .. }
+        )
     }
 }
 
@@ -355,7 +391,11 @@ struct Conn {
     selected: Option<String>,
 }
 
-pub(super) async fn worker(inner: Arc<Inner>, account_id: AccountId, mut rx: mpsc::UnboundedReceiver<WorkerMsg>) {
+pub(super) async fn worker(
+    inner: Arc<Inner>,
+    account_id: AccountId,
+    mut rx: mpsc::UnboundedReceiver<WorkerMsg>,
+) {
     let mut conn: Option<Conn> = None;
     let mut retry: VecDeque<Job> = VecDeque::new();
     let mut health_rx = inner.health.subscribe();
@@ -391,7 +431,9 @@ pub(super) async fn worker(inner: Arc<Inner>, account_id: AccountId, mut rx: mps
             }
         }
 
-        let Some(WorkerMsg { job, reply }) = msg else { continue };
+        let Some(WorkerMsg { job, reply }) = msg else {
+            continue;
+        };
         let res = run_job(&inner, account_id, &mut conn, &job).await;
         if let Err(e) = &res
             && code_of(e) == ErrorCode::Offline
@@ -415,7 +457,11 @@ pub(super) async fn worker(inner: Arc<Inner>, account_id: AccountId, mut rx: mps
     }
 }
 
-async fn ensure_conn<'a>(inner: &Inner, account_id: AccountId, conn: &'a mut Option<Conn>) -> Result<&'a mut Conn> {
+async fn ensure_conn<'a>(
+    inner: &Inner,
+    account_id: AccountId,
+    conn: &'a mut Option<Conn>,
+) -> Result<&'a mut Conn> {
     if conn.is_none() {
         let account = inner.store.account(account_id)?;
         let creds = inner.auth.credentials(&account).await?;
@@ -439,7 +485,12 @@ async fn select(c: &mut Conn, name: &str) -> Result<()> {
 }
 
 /// Runs a job, reconnecting once if a reused connection turned out dead.
-async fn run_job(inner: &Inner, account_id: AccountId, conn: &mut Option<Conn>, job: &Job) -> Result<JobOutput> {
+async fn run_job(
+    inner: &Inner,
+    account_id: AccountId,
+    conn: &mut Option<Conn>,
+    job: &Job,
+) -> Result<JobOutput> {
     let reused = conn.is_some();
     match run_job_once(inner, account_id, conn, job).await {
         Err(e) if reused && code_of(&e) == ErrorCode::Offline => {
@@ -456,7 +507,12 @@ async fn run_job(inner: &Inner, account_id: AccountId, conn: &mut Option<Conn>, 
     }
 }
 
-async fn run_job_once(inner: &Inner, account_id: AccountId, conn: &mut Option<Conn>, job: &Job) -> Result<JobOutput> {
+async fn run_job_once(
+    inner: &Inner,
+    account_id: AccountId,
+    conn: &mut Option<Conn>,
+    job: &Job,
+) -> Result<JobOutput> {
     match job {
         Job::RefreshFolders => {
             let c = ensure_conn(inner, account_id, conn).await?;
@@ -471,7 +527,15 @@ async fn run_job_once(inner: &Inner, account_id: AccountId, conn: &mut Option<Co
             let cache_days = inner.settings.read().unwrap().cache_days;
             let c = ensure_conn(inner, account_id, conn).await?;
             c.selected = Some(folder.name.clone());
-            let out = sync::sync_folder(&mut c.session, &inner.store, &folder, c.caps, cache_days, SyncMode::Full).await?;
+            let out = sync::sync_folder(
+                &mut c.session,
+                &inner.store,
+                &folder,
+                c.caps,
+                cache_days,
+                SyncMode::Full,
+            )
+            .await?;
             let _ = inner.events.send(Event::MessagesChanged {
                 account_id,
                 folder_ids: vec![*folder_id],
@@ -531,12 +595,16 @@ async fn run_job_once(inner: &Inner, account_id: AccountId, conn: &mut Option<Co
             let c = ensure_conn(inner, account_id, conn).await?;
             c.selected = Some(folder.name.clone());
             let caps = c.caps;
-            let ids = sync::load_older(&mut c.session, &inner.store, &folder, caps, *before, 50).await?;
+            let ids =
+                sync::load_older(&mut c.session, &inner.store, &folder, caps, *before, 50).await?;
             Ok(JobOutput::Ids(ids))
         }
         Job::Append { folder, raw } => {
             let c = ensure_conn(inner, account_id, conn).await?;
-            tmo(c.session.append(sync::wire_name(folder), Some("(\\Seen)"), None, raw)).await?;
+            tmo(c
+                .session
+                .append(sync::wire_name(folder), Some("(\\Seen)"), None, raw))
+            .await?;
             Ok(JobOutput::None)
         }
         Job::Prefetch { folder_id, limit } => {
@@ -550,7 +618,9 @@ async fn run_job_once(inner: &Inner, account_id: AccountId, conn: &mut Option<Co
 /// Downloads bodies of the newest messages lacking one (snippets, instant open).
 async fn prefetch(inner: &Inner, c: &mut Conn, folder_id: FolderId, limit: u32) -> Result<()> {
     let folder = inner.store.folder_state(folder_id)?;
-    let todo = inner.store.messages_without_body(folder_id, limit, 512 * 1024)?;
+    let todo = inner
+        .store
+        .messages_without_body(folder_id, limit, 512 * 1024)?;
     if todo.is_empty() {
         return Ok(());
     }
@@ -572,7 +642,12 @@ async fn prefetch(inner: &Inner, c: &mut Conn, folder_id: FolderId, limit: u32) 
 
 // ------------------------------------------------------------------ outbox
 
-pub(super) async fn send_raw(inner: &Inner, account: &AccountConfig, recipients: &[String], raw: &[u8]) -> Result<()> {
+pub(super) async fn send_raw(
+    inner: &Inner,
+    account: &AccountConfig,
+    recipients: &[String],
+    raw: &[u8],
+) -> Result<()> {
     let creds = inner.auth.credentials(account).await?;
     let res = crate::smtp::send(&account.smtp, &creds, &account.email, recipients, raw).await;
     if let Err(e) = &res
@@ -609,7 +684,8 @@ pub(super) async fn outbox_task(inner: Arc<Inner>) {
                 Err(e) => {
                     let msg = format!("{e:#}");
                     let _ = inner.store.outbox_failed(item.id, &msg);
-                    let permanent = !matches!(code_of(&e), ErrorCode::Offline | ErrorCode::AuthRequired);
+                    let permanent =
+                        !matches!(code_of(&e), ErrorCode::Offline | ErrorCode::AuthRequired);
                     if permanent && item.attempts + 1 >= 3 {
                         let _ = inner.store.outbox_done(item.id);
                         let _ = inner.events.send(Event::OutboxFailed {

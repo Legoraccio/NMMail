@@ -122,9 +122,15 @@ fn new_message_from_fetch(f: &Fetch) -> Option<NewMessage> {
 }
 
 /// Fetches header data for a UID set.
-pub async fn fetch_headers(session: &mut Session, set: &str, caps: Caps) -> Result<Vec<NewMessage>> {
+pub async fn fetch_headers(
+    session: &mut Session,
+    set: &str,
+    caps: Caps,
+) -> Result<Vec<NewMessage>> {
     let gm = if caps.gmail { " X-GM-MSGID" } else { "" };
-    let query = format!("(UID FLAGS INTERNALDATE RFC822.SIZE{gm} BODY.PEEK[HEADER.FIELDS ({HEADER_FIELDS})])");
+    let query = format!(
+        "(UID FLAGS INTERNALDATE RFC822.SIZE{gm} BODY.PEEK[HEADER.FIELDS ({HEADER_FIELDS})])"
+    );
     let fetches: Vec<Fetch> = tmo(async {
         let stream = session.uid_fetch(set, &query).await?;
         stream.try_collect::<Vec<_>>().await
@@ -244,9 +250,8 @@ pub fn classify(resp: &async_imap::imap_proto::Response<'_>) -> Changes {
     use async_imap::imap_proto::{MailboxDatum, Response};
     let mut c = Changes::default();
     match resp {
-        Response::MailboxData(MailboxDatum::Exists(_)) | Response::MailboxData(MailboxDatum::Recent(_)) => {
-            c.exists = true
-        }
+        Response::MailboxData(MailboxDatum::Exists(_))
+        | Response::MailboxData(MailboxDatum::Recent(_)) => c.exists = true,
         Response::Expunge(_) | Response::Vanished { .. } => c.expunge = true,
         Response::Fetch(..) => c.flags = true,
         _ => {}
@@ -304,7 +309,11 @@ pub async fn sync_folder(
 
     if mbox.exists == 0 {
         if !initial {
-            let local: Vec<u32> = store.folder_uids(folder.id)?.into_iter().map(|(u, _)| u).collect();
+            let local: Vec<u32> = store
+                .folder_uids(folder.id)?
+                .into_iter()
+                .map(|(u, _)| u)
+                .collect();
             if !local.is_empty() {
                 store.delete_uids(folder.id, &local)?;
                 out.changed = true;
@@ -353,9 +362,15 @@ pub async fn sync_folder(
             SyncMode::Full => Some(None),
         };
         if let Some(limit) = limit {
-            out.changed |=
-                resync_flags_and_expunges(session, store, &folder, caps, mbox.highest_modseq, limit)
-                    .await?;
+            out.changed |= resync_flags_and_expunges(
+                session,
+                store,
+                &folder,
+                caps,
+                mbox.highest_modseq,
+                limit,
+            )
+            .await?;
             flags_synced = true;
         }
     }
@@ -368,7 +383,11 @@ pub async fn sync_folder(
         uidvalidity,
         mbox.uid_next,
         highest,
-        if flags_synced { mbox.highest_modseq } else { None },
+        if flags_synced {
+            mbox.highest_modseq
+        } else {
+            None
+        },
         oldest,
     )?;
     Ok(out)
@@ -403,13 +422,20 @@ async fn resync_flags_and_expunges(
         _ => Some("(UID FLAGS)".to_string()),
     };
     if let Some(q) = flag_query {
-        let set = if caps.condstore { format!("{full_low}:*") } else { format!("{low}:*") };
+        let set = if caps.condstore {
+            format!("{full_low}:*")
+        } else {
+            format!("{low}:*")
+        };
         let fetches: Vec<Fetch> = tmo(async {
             let stream = session.uid_fetch(&set, &q).await?;
             stream.try_collect::<Vec<_>>().await
         })
         .await?;
-        let pairs: Vec<(u32, i64)> = fetches.iter().filter_map(|f| Some((f.uid?, flags_of(f)))).collect();
+        let pairs: Vec<(u32, i64)> = fetches
+            .iter()
+            .filter_map(|f| Some((f.uid?, flags_of(f))))
+            .collect();
         changed |= store.apply_flags(folder.id, &pairs)? > 0;
     }
 
@@ -444,7 +470,11 @@ pub async fn load_older(
         .await?
         .into_iter()
         .collect();
-    let known: HashSet<u32> = store.folder_uids(folder.id)?.into_iter().map(|(u, _)| u).collect();
+    let known: HashSet<u32> = store
+        .folder_uids(folder.id)?
+        .into_iter()
+        .map(|(u, _)| u)
+        .collect();
     uids.retain(|u| !known.contains(u));
     uids.sort_unstable_by(|a, b| b.cmp(a));
     uids.truncate(limit);
@@ -460,9 +490,15 @@ pub async fn store_flag(session: &mut Session, uids: &[u32], flag: &str, add: bo
     if uids.is_empty() {
         return Ok(());
     }
-    let op = if add { "+FLAGS.SILENT" } else { "-FLAGS.SILENT" };
+    let op = if add {
+        "+FLAGS.SILENT"
+    } else {
+        "-FLAGS.SILENT"
+    };
     tmo(async {
-        let stream = session.uid_store(uid_set(uids), format!("{op} ({flag})")).await?;
+        let stream = session
+            .uid_store(uid_set(uids), format!("{op} ({flag})"))
+            .await?;
         stream.try_collect::<Vec<_>>().await
     })
     .await?;
@@ -470,7 +506,12 @@ pub async fn store_flag(session: &mut Session, uids: &[u32], flag: &str, add: bo
 }
 
 /// Moves UIDs of the selected folder into `target`.
-pub async fn move_uids(session: &mut Session, uids: &[u32], target: &str, caps: Caps) -> Result<()> {
+pub async fn move_uids(
+    session: &mut Session,
+    uids: &[u32],
+    target: &str,
+    caps: Caps,
+) -> Result<()> {
     if uids.is_empty() {
         return Ok(());
     }
@@ -522,7 +563,11 @@ pub async fn gmail_primary(session: &mut Session, uids: &[u32]) -> Result<HashSe
     if uids.is_empty() {
         return Ok(HashSet::new());
     }
-    tmo(session.uid_search(format!("UID {} X-GM-RAW \"category:primary\"", uid_set(uids)))).await
+    tmo(session.uid_search(format!(
+        "UID {} X-GM-RAW \"category:primary\"",
+        uid_set(uids)
+    )))
+    .await
 }
 
 #[cfg(test)]

@@ -355,7 +355,8 @@ impl Store {
     }
 
     pub fn delete_account(&self, id: AccountId) -> Result<()> {
-        self.db().execute("DELETE FROM accounts WHERE id=?1", [id])?;
+        self.db()
+            .execute("DELETE FROM accounts WHERE id=?1", [id])?;
         Ok(())
     }
 
@@ -430,7 +431,11 @@ impl Store {
             };
             tx.execute(
                 "UPDATE folders SET depth=?1, parent_id=?2 WHERE id=?3",
-                params![if parent.is_some() { depth } else { 0 }, parent, ids[&f.name]],
+                params![
+                    if parent.is_some() { depth } else { 0 },
+                    parent,
+                    ids[&f.name]
+                ],
             )?;
         }
         tx.commit()?;
@@ -470,7 +475,11 @@ impl Store {
 
     pub fn folder_state(&self, id: FolderId) -> Result<FolderState> {
         self.db()
-            .query_row("SELECT * FROM folders WHERE id=?1", [id], folder_state_from_row)
+            .query_row(
+                "SELECT * FROM folders WHERE id=?1",
+                [id],
+                folder_state_from_row,
+            )
             .optional()?
             .ok_or_else(|| not_found(format!("folder {id}")))
     }
@@ -577,9 +586,8 @@ impl Store {
         let tx = db.transaction()?;
         let mut inserted = Vec::new();
         {
-            let mut find = tx.prepare_cached(
-                "SELECT id, flags FROM messages WHERE folder_id=?1 AND uid=?2",
-            )?;
+            let mut find =
+                tx.prepare_cached("SELECT id, flags FROM messages WHERE folder_id=?1 AND uid=?2")?;
             let mut upd = tx.prepare_cached("UPDATE messages SET flags=?1 WHERE id=?2")?;
             let mut ins = tx.prepare_cached(
                 "INSERT INTO messages(account_id, folder_id, uid, message_id, in_reply_to, refs,
@@ -659,7 +667,8 @@ impl Store {
     /// All cached UIDs of a folder with their flags.
     pub fn folder_uids(&self, folder_id: FolderId) -> Result<Vec<(u32, i64)>> {
         let db = self.db();
-        let mut st = db.prepare("SELECT uid, flags FROM messages WHERE folder_id=?1 ORDER BY uid")?;
+        let mut st =
+            db.prepare("SELECT uid, flags FROM messages WHERE folder_id=?1 ORDER BY uid")?;
         let rows = st.query_map([folder_id], |r| Ok((r.get(0)?, r.get(1)?)))?;
         Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
     }
@@ -792,7 +801,7 @@ impl Store {
             "UPDATE messages SET snippet=?1, has_attachments=?2 WHERE id=?3",
             params![snippet, has_attachments, id],
         )?;
-        let fts_row: Option<(String, Option<String>, Option<String>, String, String)> = tx
+        let fts_row: Option<FtsSource> = tx
             .query_row(
                 "SELECT subject, from_name, from_addr, to_json, cc_json FROM messages WHERE id=?1",
                 [id],
@@ -801,7 +810,10 @@ impl Store {
             .optional()?;
         if let Some((subject, from_name, from_addr, to, cc)) = fts_row {
             tx.execute("DELETE FROM messages_fts WHERE rowid=?1", [id])?;
-            let recips: Vec<Addr> = parse_addrs(&to).into_iter().chain(parse_addrs(&cc)).collect();
+            let recips: Vec<Addr> = parse_addrs(&to)
+                .into_iter()
+                .chain(parse_addrs(&cc))
+                .collect();
             let mut body = body_text.to_string();
             truncate_chars(&mut body, 20_000);
             tx.execute(
@@ -943,7 +955,7 @@ impl Store {
         if p.is_empty() {
             return Ok(Vec::new());
         }
-        let like = format!("{}%", p.replace('%', "").replace('_', ""));
+        let like = format!("{}%", p.replace(['%', '_'], ""));
         let word = format!("% {}", like);
         let db = self.db();
         let mut out: Vec<Addr> = Vec::new();
@@ -1046,7 +1058,11 @@ impl Store {
 
 // -------------------------------------------------------------------- helpers
 
-const SUMMARY_COLS: &str = "m.id, m.account_id, m.folder_id, m.subject, m.from_name, m.from_addr, m.to_json,
+/// (subject, from_name, from_addr, to_json, cc_json) of a message, for FTS rows.
+type FtsSource = (String, Option<String>, Option<String>, String, String);
+
+const SUMMARY_COLS: &str =
+    "m.id, m.account_id, m.folder_id, m.subject, m.from_name, m.from_addr, m.to_json,
     m.date, m.snippet, m.flags, m.has_attachments, m.size";
 const SUMMARY_N: usize = 12;
 
@@ -1177,11 +1193,16 @@ fn display_name_for(f: &RemoteFolder) -> String {
 fn sort_folders(folders: &mut [Folder]) {
     // Role folders first in a fixed order, then the rest alphabetically by full path.
     folders.sort_by(|a, b| {
-        (a.account_id, FolderRole::order(a.role), a.name.to_lowercase()).cmp(&(
-            b.account_id,
-            FolderRole::order(b.role),
-            b.name.to_lowercase(),
-        ))
+        (
+            a.account_id,
+            FolderRole::order(a.role),
+            a.name.to_lowercase(),
+        )
+            .cmp(&(
+                b.account_id,
+                FolderRole::order(b.role),
+                b.name.to_lowercase(),
+            ))
     });
 }
 
@@ -1272,7 +1293,11 @@ mod tests {
         assert_eq!(ids.len(), 2);
         // Re-upsert only updates flags.
         let again = s
-            .upsert_messages(a.id, inbox.id, &[msg(1, "Fattura marzo", 1000, flags::SEEN)])
+            .upsert_messages(
+                a.id,
+                inbox.id,
+                &[msg(1, "Fattura marzo", 1000, flags::SEEN)],
+            )
             .unwrap();
         assert!(again.is_empty());
 
@@ -1300,7 +1325,10 @@ mod tests {
         assert_eq!(s.search("budget", None, 10).unwrap().len(), 1);
         assert_eq!(s.search("riunione", None, 10).unwrap().len(), 1);
 
-        assert_eq!(s.set_flags(ids[0], flags::FLAGGED, flags::SEEN).unwrap(), flags::FLAGGED);
+        assert_eq!(
+            s.set_flags(ids[0], flags::FLAGGED, flags::SEEN).unwrap(),
+            flags::FLAGGED
+        );
         assert_eq!(s.inbox_unread().unwrap()[&a.id], 1);
 
         s.delete_uids(inbox.id, &[1]).unwrap();
@@ -1308,7 +1336,10 @@ mod tests {
 
         s.touch_contacts(&[Addr::new(Some("Giulia Bianchi"), "giulia@example.com")])
             .unwrap();
-        assert_eq!(s.suggest_contacts("giu", 5).unwrap()[0].address, "giulia@example.com");
+        assert_eq!(
+            s.suggest_contacts("giu", 5).unwrap()[0].address,
+            "giulia@example.com"
+        );
         assert_eq!(s.suggest_contacts("mario", 5).unwrap().len(), 1);
 
         s.delete_account(a.id).unwrap();

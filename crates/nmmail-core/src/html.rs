@@ -20,18 +20,105 @@ pub struct Rendered {
 }
 
 const TAGS: &[&str] = &[
-    "a", "abbr", "address", "b", "bdi", "bdo", "big", "blockquote", "br", "caption", "center",
-    "cite", "code", "col", "colgroup", "dd", "del", "details", "dfn", "div", "dl", "dt", "em",
-    "figcaption", "figure", "font", "footer", "h1", "h2", "h3", "h4", "h5", "h6", "header", "hr",
-    "i", "img", "ins", "kbd", "li", "main", "mark", "nav", "ol", "p", "picture", "pre", "q", "s",
-    "samp", "section", "small", "span", "strike", "strong", "style", "sub", "summary", "sup",
-    "table", "tbody", "td", "tfoot", "th", "thead", "time", "tr", "tt", "u", "ul", "var", "wbr",
-    "article", "aside", "label", "map", "area", "source",
+    "a",
+    "abbr",
+    "address",
+    "b",
+    "bdi",
+    "bdo",
+    "big",
+    "blockquote",
+    "br",
+    "caption",
+    "center",
+    "cite",
+    "code",
+    "col",
+    "colgroup",
+    "dd",
+    "del",
+    "details",
+    "dfn",
+    "div",
+    "dl",
+    "dt",
+    "em",
+    "figcaption",
+    "figure",
+    "font",
+    "footer",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "header",
+    "hr",
+    "i",
+    "img",
+    "ins",
+    "kbd",
+    "li",
+    "main",
+    "mark",
+    "nav",
+    "ol",
+    "p",
+    "picture",
+    "pre",
+    "q",
+    "s",
+    "samp",
+    "section",
+    "small",
+    "span",
+    "strike",
+    "strong",
+    "style",
+    "sub",
+    "summary",
+    "sup",
+    "table",
+    "tbody",
+    "td",
+    "tfoot",
+    "th",
+    "thead",
+    "time",
+    "tr",
+    "tt",
+    "u",
+    "ul",
+    "var",
+    "wbr",
+    "article",
+    "aside",
+    "label",
+    "map",
+    "area",
+    "source",
 ];
 
 const GENERIC_ATTRS: &[&str] = &[
-    "style", "class", "id", "dir", "lang", "title", "align", "valign", "width", "height",
-    "bgcolor", "background", "border", "color", "nowrap", "role", "aria-hidden", "aria-label",
+    "style",
+    "class",
+    "id",
+    "dir",
+    "lang",
+    "title",
+    "align",
+    "valign",
+    "width",
+    "height",
+    "bgcolor",
+    "background",
+    "border",
+    "color",
+    "nowrap",
+    "role",
+    "aria-hidden",
+    "aria-label",
 ];
 
 fn is_remote(url: &str) -> bool {
@@ -50,17 +137,32 @@ pub fn sanitize(html: &str, cids: &HashMap<String, String>, allow_remote: bool) 
     let mut b = ammonia::Builder::default();
     b.rm_clean_content_tags(["style"])
         .tags(TAGS.iter().copied().collect())
-        .add_clean_content_tags(["script", "noscript", "title", "head", "object", "iframe", "template", "svg", "math", "form", "select", "textarea", "button"])
+        .add_clean_content_tags([
+            "script", "noscript", "title", "head", "object", "iframe", "template", "svg", "math",
+            "form", "select", "textarea", "button",
+        ])
         .generic_attributes(GENERIC_ATTRS.iter().copied().collect())
         .add_tag_attributes("a", ["href", "name", "target"])
-        .add_tag_attributes("img", ["src", "alt", "srcset", "usemap", "hspace", "vspace"])
+        .add_tag_attributes(
+            "img",
+            ["src", "alt", "srcset", "usemap", "hspace", "vspace"],
+        )
         .add_tag_attributes("source", ["srcset", "media", "type"])
         .add_tag_attributes("area", ["href", "shape", "coords", "alt"])
         .add_tag_attributes("map", ["name"])
         .add_tag_attributes("font", ["face", "size"])
-        .add_tag_attributes("table", ["cellpadding", "cellspacing", "summary", "frame", "rules"])
-        .add_tag_attributes("td", ["colspan", "rowspan", "headers", "scope", "abbr", "axis"])
-        .add_tag_attributes("th", ["colspan", "rowspan", "headers", "scope", "abbr", "axis"])
+        .add_tag_attributes(
+            "table",
+            ["cellpadding", "cellspacing", "summary", "frame", "rules"],
+        )
+        .add_tag_attributes(
+            "td",
+            ["colspan", "rowspan", "headers", "scope", "abbr", "axis"],
+        )
+        .add_tag_attributes(
+            "th",
+            ["colspan", "rowspan", "headers", "scope", "abbr", "axis"],
+        )
         .add_tag_attributes("col", ["span"])
         .add_tag_attributes("colgroup", ["span"])
         .add_tag_attributes("ol", ["start", "type", "reversed"])
@@ -68,7 +170,11 @@ pub fn sanitize(html: &str, cids: &HashMap<String, String>, allow_remote: bool) 
         .add_tag_attributes("li", ["value", "type"])
         .add_tag_attributes("time", ["datetime"])
         .add_tag_attributes("style", ["type", "media"])
-        .url_schemes(["http", "https", "mailto", "tel", "data", "cid"].into_iter().collect())
+        .url_schemes(
+            ["http", "https", "mailto", "tel", "data", "cid"]
+                .into_iter()
+                .collect(),
+        )
         .link_rel(Some("noopener noreferrer"))
         .strip_comments(true)
         .attribute_filter(move |element, attribute, value| {
@@ -82,7 +188,9 @@ pub fn sanitize(html: &str, cids: &HashMap<String, String>, allow_remote: bool) 
                     if v.to_ascii_lowercase().starts_with("data:") {
                         // Only raster images are allowed as data URLs.
                         let lower = v.to_ascii_lowercase();
-                        return if lower.starts_with("data:image/") && !lower.starts_with("data:image/svg") {
+                        return if lower.starts_with("data:image/")
+                            && !lower.starts_with("data:image/svg")
+                        {
                             Some(Cow::Borrowed(value))
                         } else {
                             None
@@ -90,7 +198,11 @@ pub fn sanitize(html: &str, cids: &HashMap<String, String>, allow_remote: bool) 
                     }
                     if is_remote(v) || v.contains("http") {
                         flag.store(true, Ordering::Relaxed);
-                        return if allow_remote { Some(Cow::Borrowed(value)) } else { None };
+                        return if allow_remote {
+                            Some(Cow::Borrowed(value))
+                        } else {
+                            None
+                        };
                     }
                     None
                 }
@@ -227,7 +339,11 @@ form-action 'none'; base-uri 'none'\">\
 /// Renders the body of a parsed message for display.
 pub fn render_message(parsed: &crate::mime::Parsed, raw: &[u8], allow_remote: bool) -> Rendered {
     let mut cids = HashMap::new();
-    if parsed.html.as_deref().is_some_and(|h| h.to_ascii_lowercase().contains("cid:")) {
+    if parsed
+        .html
+        .as_deref()
+        .is_some_and(|h| h.to_ascii_lowercase().contains("cid:"))
+    {
         for (cid, mime, bytes) in crate::mime::inline_parts(raw) {
             // Keep the document reasonably small.
             if bytes.len() <= 4 * 1024 * 1024 {
@@ -282,7 +398,11 @@ mod tests {
         assert!(h.contains(".a{color:red}"));
         assert!(h.contains("background:none;color:blue"));
 
-        let (h, remote) = sanitize("<img src=\"https://t.example/p.gif\">", &HashMap::new(), true);
+        let (h, remote) = sanitize(
+            "<img src=\"https://t.example/p.gif\">",
+            &HashMap::new(),
+            true,
+        );
         assert!(remote);
         assert!(h.contains("https://t.example/p.gif"));
     }
@@ -298,7 +418,11 @@ mod tests {
 
     #[test]
     fn links_get_rel() {
-        let (h, _) = sanitize("<a href=\"https://example.com\">x</a><a href=\"javascript:alert(1)\">y</a>", &HashMap::new(), false);
+        let (h, _) = sanitize(
+            "<a href=\"https://example.com\">x</a><a href=\"javascript:alert(1)\">y</a>",
+            &HashMap::new(),
+            false,
+        );
         assert!(h.contains("rel=\"noopener noreferrer\""));
         assert!(!h.contains("javascript"));
     }

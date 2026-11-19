@@ -6,14 +6,17 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use nmmail_core::{Engine, ipc, paths};
-use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient, NamedPipeServer, ServerOptions};
+use tokio::net::windows::named_pipe::{
+    ClientOptions, NamedPipeClient, NamedPipeServer, ServerOptions,
+};
 use tracing::warn;
 use windows::Win32::Foundation::{ERROR_PIPE_BUSY, HANDLE, HLOCAL, LocalFree};
 use windows::Win32::Security::Authorization::{
     ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
 };
 use windows::Win32::Security::{
-    GetTokenInformation, PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER, TokenUser,
+    GetTokenInformation, PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES, TOKEN_QUERY, TOKEN_USER,
+    TokenUser,
 };
 use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 use windows::core::{HSTRING, PWSTR};
@@ -32,7 +35,13 @@ fn current_user_sid() -> Result<String> {
         let mut len = 0u32;
         let _ = GetTokenInformation(token, TokenUser, None, 0, &mut len);
         let mut buf = vec![0u8; len as usize];
-        GetTokenInformation(token, TokenUser, Some(buf.as_mut_ptr() as *mut c_void), len, &mut len)?;
+        GetTokenInformation(
+            token,
+            TokenUser,
+            Some(buf.as_mut_ptr() as *mut c_void),
+            len,
+            &mut len,
+        )?;
         let _ = windows::Win32::Foundation::CloseHandle(token);
         let user = &*(buf.as_ptr() as *const TOKEN_USER);
         let mut s = PWSTR::null();
@@ -53,8 +62,13 @@ fn security_attributes() -> Result<&'static Sa> {
     let mut sd = PSECURITY_DESCRIPTOR::default();
     // SAFETY: valid SDDL string; descriptor intentionally leaked.
     unsafe {
-        ConvertStringSecurityDescriptorToSecurityDescriptorW(&HSTRING::from(sddl), SDDL_REVISION_1, &mut sd, None)
-            .context("building pipe security descriptor")?;
+        ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            &HSTRING::from(sddl),
+            SDDL_REVISION_1,
+            &mut sd,
+            None,
+        )
+        .context("building pipe security descriptor")?;
     }
     let sa = Box::new(SECURITY_ATTRIBUTES {
         nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,

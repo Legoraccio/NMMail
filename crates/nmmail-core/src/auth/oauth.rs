@@ -145,7 +145,10 @@ pub fn identity_from_id_token(id_token: &str) -> Option<Identity> {
         .to_string();
     Some(Identity {
         email,
-        name: v.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()),
+        name: v
+            .get("name")
+            .and_then(|n| n.as_str())
+            .map(|s| s.to_string()),
         tenant: v.get("tid").and_then(|n| n.as_str()).map(|s| s.to_string()),
     })
 }
@@ -178,14 +181,17 @@ async fn post_token(url: &'static str, form: Vec<(&'static str, String)>) -> Res
 fn tokens_from(r: TokenResponse) -> Result<(Tokens, Option<String>)> {
     if let Some(err) = r.error {
         let desc = r.error_description.unwrap_or_default();
-        let code = if err == "invalid_grant" || err == "interaction_required" || err == "invalid_client" {
-            ErrorCode::AuthRequired
-        } else {
-            ErrorCode::Server
-        };
+        let code =
+            if err == "invalid_grant" || err == "interaction_required" || err == "invalid_client" {
+                ErrorCode::AuthRequired
+            } else {
+                ErrorCode::Server
+            };
         return Err(coded(code, format!("{err}: {desc}")));
     }
-    let access_token = r.access_token.ok_or_else(|| anyhow!("no access_token in response"))?;
+    let access_token = r
+        .access_token
+        .ok_or_else(|| anyhow!("no access_token in response"))?;
     Ok((
         Tokens {
             access_token,
@@ -360,7 +366,9 @@ async fn handle_redirect(sock: &mut tokio::net::TcpStream, state: &str) -> Resul
         )
     };
     if get("state").is_none() && get("error").is_none() {
-        let _ = sock.write_all(respond("404 Not Found", "").as_bytes()).await;
+        let _ = sock
+            .write_all(respond("404 Not Found", "").as_bytes())
+            .await;
         return Ok(None);
     }
     if let Some(err) = get("error") {
@@ -373,11 +381,15 @@ async fn handle_redirect(sock: &mut tokio::net::TcpStream, state: &str) -> Resul
         return Err(coded(code, format!("authorization error: {err}")));
     }
     if get("state").as_deref() != Some(state) {
-        let _ = sock.write_all(respond("400 Bad Request", PAGE_ERR).as_bytes()).await;
+        let _ = sock
+            .write_all(respond("400 Bad Request", PAGE_ERR).as_bytes())
+            .await;
         return Ok(None);
     }
     let Some(code) = get("code") else {
-        let _ = sock.write_all(respond("400 Bad Request", PAGE_ERR).as_bytes()).await;
+        let _ = sock
+            .write_all(respond("400 Bad Request", PAGE_ERR).as_bytes())
+            .await;
         return Ok(None);
     };
     let _ = sock.write_all(respond("200 OK", PAGE_OK).as_bytes()).await;
@@ -410,7 +422,9 @@ mod tests {
     }
 
     async fn browser_get(port: u16, path: &str) -> String {
-        let mut s = tokio::net::TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+        let mut s = tokio::net::TcpStream::connect(("127.0.0.1", port))
+            .await
+            .unwrap();
         s.write_all(format!("GET {path} HTTP/1.1\r\nHost: x\r\n\r\n").as_bytes())
             .await
             .unwrap();

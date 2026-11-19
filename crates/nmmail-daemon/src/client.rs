@@ -25,7 +25,8 @@ async fn call(method: &str, params: serde_json::Value) -> anyhow::Result<()> {
     }
     let stream = stream.ok_or_else(|| anyhow::anyhow!("daemon not reachable"))?;
     let (rd, mut wr) = tokio::io::split(stream);
-    let req = serde_json::json!({ "id": 1, "method": "hello", "params": { "client": "activator" } });
+    let req =
+        serde_json::json!({ "id": 1, "method": "hello", "params": { "client": "activator" } });
     wr.write_all(format!("{req}\n").as_bytes()).await?;
     let req = serde_json::json!({ "id": 2, "method": method, "params": params });
     wr.write_all(format!("{req}\n").as_bytes()).await?;
@@ -46,7 +47,10 @@ async fn call(method: &str, params: serde_json::Value) -> anyhow::Result<()> {
 fn block_on(fut: impl Future<Output = anyhow::Result<()>>) -> ExitCode {
     // Let the daemon / UI take the foreground (we got the user's click).
     platform::allow_foreground();
-    let rt = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
+    let rt = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
         Ok(rt) => rt,
         Err(_) => return ExitCode::FAILURE,
     };

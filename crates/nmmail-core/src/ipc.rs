@@ -30,7 +30,11 @@ struct Request {
 }
 
 fn p<T: for<'de> Deserialize<'de>>(params: &Value) -> Result<T> {
-    let v = if params.is_null() { json!({}) } else { params.clone() };
+    let v = if params.is_null() {
+        json!({})
+    } else {
+        params.clone()
+    };
     serde_json::from_value(v).map_err(|e| bad_request(format!("invalid params: {e}")))
 }
 
@@ -166,7 +170,9 @@ struct ActivateParams {
 /// Executes one request.
 pub async fn dispatch(engine: &Engine, method: &str, params: &Value) -> Result<Value> {
     Ok(match method {
-        "hello" => json!({ "daemonVersion": env!("CARGO_PKG_VERSION"), "protocol": PROTOCOL_VERSION }),
+        "hello" => {
+            json!({ "daemonVersion": env!("CARGO_PKG_VERSION"), "protocol": PROTOCOL_VERSION })
+        }
         "daemon.status" => serde_json::to_value(engine.status()?)?,
         "daemon.shutdown" => {
             engine.request_shutdown();
@@ -306,7 +312,10 @@ fn error_json(err: &anyhow::Error) -> Value {
         ErrorCode::Internal => format!("{err:#}"),
         _ => err
             .chain()
-            .find_map(|c| c.downcast_ref::<crate::error::CodedError>().map(|c| c.message.clone()))
+            .find_map(|c| {
+                c.downcast_ref::<crate::error::CodedError>()
+                    .map(|c| c.message.clone())
+            })
             .unwrap_or_else(|| format!("{err:#}")),
     };
     json!({ "code": code, "message": message })
@@ -354,7 +363,11 @@ where
     let mut buf = Vec::with_capacity(4096);
     loop {
         buf.clear();
-        match (&mut reader).take(MAX_LINE as u64).read_until(b'\n', &mut buf).await {
+        match (&mut reader)
+            .take(MAX_LINE as u64)
+            .read_until(b'\n', &mut buf)
+            .await
+        {
             Ok(0) => break,
             Ok(_) => {}
             Err(e) => {

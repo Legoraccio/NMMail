@@ -43,7 +43,11 @@ async fn serve(background: bool) -> anyhow::Result<()> {
         }
         return Ok(());
     };
-    info!(version = env!("CARGO_PKG_VERSION"), pid = std::process::id(), "nmmaild starting");
+    info!(
+        version = env!("CARGO_PKG_VERSION"),
+        pid = std::process::id(),
+        "nmmaild starting"
+    );
 
     let store = Store::open(&paths::db_path())?;
     let plat = platform::NativePlatform::new();

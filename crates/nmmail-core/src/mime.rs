@@ -46,29 +46,47 @@ fn addrs(list: Option<AddressList<'_>>) -> Vec<Addr> {
 
 fn header_info(m: MessageRef<'_>) -> HeaderInfo {
     let ct = m.content_type();
-    let mixed = ct
-        .as_ref()
-        .is_some_and(|c| c.ctype().eq_ignore_ascii_case("multipart") && c.subtype().is_some_and(|s| s.eq_ignore_ascii_case("mixed")));
+    let mixed = ct.as_ref().is_some_and(|c| {
+        c.ctype().eq_ignore_ascii_case("multipart")
+            && c.subtype().is_some_and(|s| s.eq_ignore_ascii_case("mixed"))
+    });
     let headers = m.headers();
     let ms_attach = headers
         .get("X-MS-Has-Attach")
-        .and_then(|h| h.value().as_text().map(|t| t.trim().eq_ignore_ascii_case("yes")))
+        .and_then(|h| {
+            h.value()
+                .as_text()
+                .map(|t| t.trim().eq_ignore_ascii_case("yes"))
+        })
         .unwrap_or(false);
     let category = headers
         .get("X-Test-Category")
         .and_then(|h| h.value().as_text().map(|t| t.trim().to_ascii_lowercase()));
     HeaderInfo {
         subject: m.subject().unwrap_or_default().trim().to_string(),
-        from: addrs(m.from()).into_iter().next().or_else(|| addrs(m.sender()).into_iter().next()),
+        from: addrs(m.from())
+            .into_iter()
+            .next()
+            .or_else(|| addrs(m.sender()).into_iter().next()),
         to: addrs(m.to()),
         cc: addrs(m.cc()),
         reply_to: addrs(m.reply_to()),
-        date: m.date().filter(|d| d.is_valid()).map(|d| d.to_timestamp() * 1000),
+        date: m
+            .date()
+            .filter(|d| d.is_valid())
+            .map(|d| d.to_timestamp() * 1000),
         message_id: m.message_id().map(|s| s.to_string()),
-        in_reply_to: m.in_reply_to().and_then(|l| l.first().map(|s| s.to_string())),
+        in_reply_to: m
+            .in_reply_to()
+            .and_then(|l| l.first().map(|s| s.to_string())),
         references: m
             .references()
-            .map(|l| l.iter().map(|s| format!("<{s}>")).collect::<Vec<_>>().join(" "))
+            .map(|l| {
+                l.iter()
+                    .map(|s| format!("<{s}>"))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
             .filter(|s| !s.is_empty()),
         has_attachments_hint: mixed || ms_attach,
         category,
@@ -153,7 +171,10 @@ pub fn parse_full(raw: &[u8]) -> Parsed {
 
     let html_parts: Vec<_> = root.html_body().collect();
     let text_parts: Vec<_> = root.text_body().collect();
-    let html = if html_parts.iter().any(|p| matches!(p.kind(), PartKind::Html)) {
+    let html = if html_parts
+        .iter()
+        .any(|p| matches!(p.kind(), PartKind::Html))
+    {
         let mut s = String::new();
         for p in &html_parts {
             match p.kind() {
@@ -230,7 +251,11 @@ pub fn inline_parts(raw: &[u8]) -> Vec<(String, String, Vec<u8>)> {
             if !mime.starts_with("image/") {
                 return None;
             }
-            Some((cid.trim_matches(['<', '>']).to_string(), mime, p.decoded().into_owned()))
+            Some((
+                cid.trim_matches(['<', '>']).to_string(),
+                mime,
+                p.decoded().into_owned(),
+            ))
         })
         .collect()
 }
@@ -261,7 +286,11 @@ pub fn make_snippet(text: &str) -> String {
             continue;
         }
         for c in l.chars() {
-            let c = if c.is_whitespace() || c.is_control() { ' ' } else { c };
+            let c = if c.is_whitespace() || c.is_control() {
+                ' '
+            } else {
+                c
+            };
             if c == ' ' {
                 if last_space {
                     continue;
@@ -327,16 +356,29 @@ JVBERi0xLjQK\r\n\
     fn parses_full_message() {
         let p = parse_full(MSG);
         assert_eq!(p.headers.subject, "Prova allegato");
-        assert_eq!(p.headers.from.as_ref().unwrap().name.as_deref(), Some("José"));
+        assert_eq!(
+            p.headers.from.as_ref().unwrap().name.as_deref(),
+            Some("José")
+        );
         assert_eq!(p.headers.to.len(), 2);
         assert_eq!(p.headers.message_id.as_deref(), Some("abc@example.com"));
         assert_eq!(p.headers.in_reply_to.as_deref(), Some("r2@example.com"));
-        assert!(p.headers.references.as_deref().unwrap().contains("<r1@example.com>"));
+        assert!(
+            p.headers
+                .references
+                .as_deref()
+                .unwrap()
+                .contains("<r1@example.com>")
+        );
         assert!(p.headers.has_attachments_hint);
         assert!(p.html.as_deref().unwrap().contains("<b>il file</b>"));
         assert!(p.text.as_deref().unwrap().contains("in allegato il file"));
         assert_eq!(p.snippet, "Ciao, in allegato il file.");
-        let pdf = p.attachments.iter().find(|a| a.filename == "fattura.pdf").unwrap();
+        let pdf = p
+            .attachments
+            .iter()
+            .find(|a| a.filename == "fattura.pdf")
+            .unwrap();
         assert_eq!(pdf.mime, "application/pdf");
         assert!(!pdf.inline);
         let (name, _, bytes) = attachment(MSG, pdf.part_id).unwrap();

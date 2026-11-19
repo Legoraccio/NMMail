@@ -34,6 +34,9 @@ pub use platform::{Notification, NotifyItem, Platform};
 
 const BODY_TIMEOUT: Duration = Duration::from_secs(90);
 
+/// Messages grouped by (account, folder): (a sample row, UIDs, local ids).
+type Groups = HashMap<(AccountId, FolderId), (crate::store::MessageRow, Vec<u32>, Vec<MessageId>)>;
+
 #[derive(Debug, Clone)]
 struct Status {
     state: AccountState,
@@ -112,7 +115,11 @@ pub struct DaemonStatus {
 
 impl Engine {
     /// Starts the engine (must run inside a tokio runtime).
-    pub fn start(store: Store, secrets: Arc<dyn SecretStore>, platform: Arc<dyn Platform>) -> Result<Engine> {
+    pub fn start(
+        store: Store,
+        secrets: Arc<dyn SecretStore>,
+        platform: Arc<dyn Platform>,
+    ) -> Result<Engine> {
         let settings = Arc::new(RwLock::new(store.load_settings()?));
         let auth = Arc::new(AuthManager::new(secrets, settings.clone()));
         let (events, _) = broadcast::channel(256);
@@ -206,7 +213,9 @@ impl Engine {
     /// Handles a `nmmail:` URI (notification clicks and buttons).
     pub async fn activate(&self, uri: &str) -> Result<()> {
         let url = url::Url::parse(uri).map_err(|_| bad_request("invalid uri"))?;
-        let action = url.host_str().unwrap_or_else(|| url.path().trim_matches('/'));
+        let action = url
+            .host_str()
+            .unwrap_or_else(|| url.path().trim_matches('/'));
         let msg = url
             .query_pairs()
             .find(|(k, _)| k == "msg")
@@ -282,7 +291,10 @@ impl Engine {
             // Re-authentication of a known account.
             self.inner.auth.save_oauth(existing.id, &tokens)?;
             self.inner.restart_account(existing.id);
-            let _ = self.inner.events.send(Event::AuthProgress { stage: "done", url: None });
+            let _ = self.inner.events.send(Event::AuthProgress {
+                stage: "done",
+                url: None,
+            });
             return self.account(existing.id);
         }
 
@@ -297,7 +309,10 @@ impl Engine {
         let cfg = self.inner.store.insert_account(&NewAccount {
             provider,
             email: identity.email.clone(),
-            display_name: identity.name.clone().unwrap_or_else(|| identity.email.clone()),
+            display_name: identity
+                .name
+                .clone()
+                .unwrap_or_else(|| identity.email.clone()),
             username: identity.email.clone(),
             auth: AuthKind::OAuth2,
             imap,
@@ -306,7 +321,10 @@ impl Engine {
         self.inner.auth.save_oauth(cfg.id, &tokens)?;
         self.inner.start_account(cfg.id);
         let _ = self.inner.events.send(Event::AccountsChanged {});
-        let _ = self.inner.events.send(Event::AuthProgress { stage: "done", url: None });
+        let _ = self.inner.events.send(Event::AuthProgress {
+            stage: "done",
+            url: None,
+        });
         self.account(cfg.id)
     }
 
@@ -324,7 +342,10 @@ impl Engine {
         if self.inner.store.account_by_email(&email)?.is_some() {
             return Err(bad_request("account already exists"));
         }
-        let username = p.username.filter(|u| !u.trim().is_empty()).unwrap_or_else(|| email.clone());
+        let username = p
+            .username
+            .filter(|u| !u.trim().is_empty())
+            .unwrap_or_else(|| email.clone());
         let imap = ServerConfig {
             host: p.imap_host.trim().to_string(),
             port: p.imap_port,
@@ -403,7 +424,8 @@ impl Engine {
             // INBOX belongs to the watcher (it decides about notifications).
             self.inner.wake(f.account_id);
         } else {
-            self.inner.job(f.account_id, Job::SyncFolder(folder_id), None);
+            self.inner
+                .job(f.account_id, Job::SyncFolder(folder_id), None);
         }
         Ok(())
     }
@@ -411,7 +433,14 @@ impl Engine {
     pub fn sync_now(&self, account_id: Option<AccountId>) {
         let ids: Vec<AccountId> = match account_id {
             Some(id) => vec![id],
-            None => self.inner.accounts.lock().unwrap().keys().copied().collect(),
+            None => self
+                .inner
+                .accounts
+                .lock()
+                .unwrap()
+                .keys()
+                .copied()
+                .collect(),
         };
         for id in ids {
             self.inner.wake(id);
@@ -436,13 +465,20 @@ impl Engine {
             _ => return Err(bad_request("folderId or unified required")),
         };
         let limit = limit.clamp(1, 500);
-        let mut v = self.inner.store.list_messages(scope, before, limit + 1, unread_only)?;
+        let mut v = self
+            .inner
+            .store
+            .list_messages(scope, before, limit + 1, unread_only)?;
         let more = v.len() > limit as usize;
         v.truncate(limit as usize);
         Ok((v, more))
     }
 
-    pub async fn load_older(&self, folder_id: FolderId, before: i64) -> Result<(Vec<MessageSummary>, bool)> {
+    pub async fn load_older(
+        &self,
+        folder_id: FolderId,
+        before: i64,
+    ) -> Result<(Vec<MessageSummary>, bool)> {
         let f = self.inner.store.folder_state(folder_id)?;
         let out = self
             .inner
@@ -464,7 +500,8 @@ impl Engine {
         let row = self.inner.store.message_row(id)?;
         let out = tokio::time::timeout(
             BODY_TIMEOUT,
-            self.inner.request(row.summary.account_id, Job::FetchBody(id)),
+            self.inner
+                .request(row.summary.account_id, Job::FetchBody(id)),
         )
         .await
         .map_err(|_| coded(ErrorCode::Offline, "timed out downloading the message"))??;
@@ -487,13 +524,21 @@ impl Engine {
             summary.has_attachments = parsed.attachments.iter().any(|a| !a.inline);
             MessageDetail {
                 summary,
-                cc: if parsed.headers.cc.is_empty() { row.cc.clone() } else { parsed.headers.cc.clone() },
+                cc: if parsed.headers.cc.is_empty() {
+                    row.cc.clone()
+                } else {
+                    parsed.headers.cc.clone()
+                },
                 bcc: Vec::new(),
                 reply_to: parsed.headers.reply_to.clone(),
                 message_id_header: parsed.headers.message_id.clone(),
                 html: Some(rendered.document),
                 text: parsed.text.clone(),
-                attachments: parsed.attachments.into_iter().filter(|a| !a.inline).collect(),
+                attachments: parsed
+                    .attachments
+                    .into_iter()
+                    .filter(|a| !a.inline)
+                    .collect(),
                 has_remote_content: rendered.has_remote_content,
                 remote_allowed: allow_remote,
             }
@@ -502,25 +547,34 @@ impl Engine {
         Ok(detail)
     }
 
-    /// Groups messages by (account, folder) → (folder name, uids, ids).
-    fn group(&self, ids: &[MessageId]) -> Result<HashMap<(AccountId, FolderId), (crate::store::MessageRow, Vec<u32>, Vec<MessageId>)>> {
-        let mut groups: HashMap<(AccountId, FolderId), (crate::store::MessageRow, Vec<u32>, Vec<MessageId>)> =
-            HashMap::new();
+    /// Groups messages by (account, folder) → (first row, uids, ids).
+    fn group(&self, ids: &[MessageId]) -> Result<Groups> {
+        let mut groups: Groups = HashMap::new();
         for id in ids {
             let row = self.inner.store.message_row(*id)?;
             let key = (row.summary.account_id, row.summary.folder_id);
             let uid = row.uid;
-            let e = groups.entry(key).or_insert_with(|| (row, Vec::new(), Vec::new()));
+            let e = groups
+                .entry(key)
+                .or_insert_with(|| (row, Vec::new(), Vec::new()));
             e.1.push(uid);
             e.2.push(*id);
         }
         Ok(groups)
     }
 
-    pub async fn set_flags(&self, ids: &[MessageId], seen: Option<bool>, flagged: Option<bool>) -> Result<()> {
+    pub async fn set_flags(
+        &self,
+        ids: &[MessageId],
+        seen: Option<bool>,
+        flagged: Option<bool>,
+    ) -> Result<()> {
         let groups = self.group(ids)?;
         for ((account_id, folder_id), (_, uids, mids)) in groups {
-            for (flag, bit, value) in [("\\Seen", flags::SEEN, seen), ("\\Flagged", flags::FLAGGED, flagged)] {
+            for (flag, bit, value) in [
+                ("\\Seen", flags::SEEN, seen),
+                ("\\Flagged", flags::FLAGGED, flagged),
+            ] {
                 let Some(v) = value else { continue };
                 for id in &mids {
                     if v {
@@ -555,24 +609,30 @@ impl Engine {
             let account = self.inner.store.account(account_id)?;
             let target = match self.inner.store.folder_by_role(account_id, role)? {
                 Some(t) => Some(t),
-                None if role == FolderRole::Archive && account.provider == Provider::Gmail => {
-                    self.inner.store.folder_by_role(account_id, FolderRole::All)?
-                }
+                None if role == FolderRole::Archive && account.provider == Provider::Gmail => self
+                    .inner
+                    .store
+                    .folder_by_role(account_id, FolderRole::All)?,
                 None => None,
             };
             let Some(target) = target else {
                 if role == FolderRole::Trash {
                     // No trash folder: delete permanently.
                     self.inner.store.delete_messages(&mids)?;
-                    self.inner.job(account_id, Job::Expunge { folder_id, uids }, None);
+                    self.inner
+                        .job(account_id, Job::Expunge { folder_id, uids }, None);
                     continue;
                 }
-                return Err(coded(ErrorCode::NotFound, "no archive folder on this account"));
+                return Err(coded(
+                    ErrorCode::NotFound,
+                    "no archive folder on this account",
+                ));
             };
             if target.id == folder_id {
                 if role == FolderRole::Trash {
                     self.inner.store.delete_messages(&mids)?;
-                    self.inner.job(account_id, Job::Expunge { folder_id, uids }, None);
+                    self.inner
+                        .job(account_id, Job::Expunge { folder_id, uids }, None);
                 }
                 continue;
             }
@@ -633,8 +693,15 @@ impl Engine {
         Ok(())
     }
 
-    pub fn search(&self, query: &str, account_id: Option<AccountId>, limit: u32) -> Result<Vec<MessageSummary>> {
-        self.inner.store.search(query, account_id, limit.clamp(1, 500))
+    pub fn search(
+        &self,
+        query: &str,
+        account_id: Option<AccountId>,
+        limit: u32,
+    ) -> Result<Vec<MessageSummary>> {
+        self.inner
+            .store
+            .search(query, account_id, limit.clamp(1, 500))
     }
 
     pub async fn save_attachment(&self, id: MessageId, part_id: u32, path: &str) -> Result<String> {
@@ -646,17 +713,26 @@ impl Engine {
         if let Some(dir) = path.parent() {
             tokio::fs::create_dir_all(dir).await.ok();
         }
-        tokio::fs::write(&path, bytes).await.with_context(|| format!("writing {}", path.display()))?;
+        tokio::fs::write(&path, bytes)
+            .await
+            .with_context(|| format!("writing {}", path.display()))?;
         Ok(path.to_string_lossy().into_owned())
     }
 
     pub fn suggest_contacts(&self, prefix: &str, limit: u32) -> Result<Vec<Addr>> {
-        self.inner.store.suggest_contacts(prefix, limit.clamp(1, 50))
+        self.inner
+            .store
+            .suggest_contacts(prefix, limit.clamp(1, 50))
     }
 
     // -------------------------------------------------------------- compose
 
-    pub async fn compose_prepare(&self, mode: Mode, message_id: MessageId, lang: &str) -> Result<Prepared> {
+    pub async fn compose_prepare(
+        &self,
+        mode: Mode,
+        message_id: MessageId,
+        lang: &str,
+    ) -> Result<Prepared> {
         let raw = self.raw(message_id).await?;
         let row = self.inner.store.message_row(message_id)?;
         let me = self.inner.store.account(row.summary.account_id)?;
@@ -690,7 +766,13 @@ impl Engine {
         }
         let from = Addr::new(Some(&account.display_name), &account.email);
         let (raw, _mid) = compose::build(&from, &req, extra)?;
-        let all: Vec<Addr> = req.to.iter().chain(req.cc.iter()).chain(req.bcc.iter()).cloned().collect();
+        let all: Vec<Addr> = req
+            .to
+            .iter()
+            .chain(req.cc.iter())
+            .chain(req.bcc.iter())
+            .cloned()
+            .collect();
         self.inner.store.touch_contacts(&all)?;
 
         let attempt = tokio::time::timeout(
@@ -700,13 +782,16 @@ impl Engine {
         .await;
         match attempt {
             Ok(Ok(())) => {
-                self.inner.after_sent(&account, req.reply_to_message_id, raw);
+                self.inner
+                    .after_sent(&account, req.reply_to_message_id, raw);
                 Ok(SendResult {
                     outbox_id: 0,
                     queued: false,
                 })
             }
-            Ok(Err(e)) if !matches!(code_of(&e), ErrorCode::Offline | ErrorCode::AuthRequired) => Err(e),
+            Ok(Err(e)) if !matches!(code_of(&e), ErrorCode::Offline | ErrorCode::AuthRequired) => {
+                Err(e)
+            }
             _ => {
                 let id = self.inner.store.outbox_insert(
                     account.id,
@@ -736,9 +821,18 @@ impl Engine {
         }
         self.inner.store.save_settings(&new)?;
         *self.inner.settings.write().unwrap() = new.clone();
-        if new.google_client_id != old.google_client_id || new.microsoft_client_id != old.microsoft_client_id {
+        if new.google_client_id != old.google_client_id
+            || new.microsoft_client_id != old.microsoft_client_id
+        {
             // Accounts waiting for credentials may now be able to refresh.
-            let ids: Vec<AccountId> = self.inner.accounts.lock().unwrap().keys().copied().collect();
+            let ids: Vec<AccountId> = self
+                .inner
+                .accounts
+                .lock()
+                .unwrap()
+                .keys()
+                .copied()
+                .collect();
             for id in ids {
                 self.inner.wake(id);
             }
@@ -827,7 +921,12 @@ impl Inner {
     }
 
     fn job(&self, id: AccountId, job: Job, reply: Option<oneshot::Sender<Result<JobOutput>>>) {
-        let tx = self.accounts.lock().unwrap().get(&id).map(|r| r.worker.clone());
+        let tx = self
+            .accounts
+            .lock()
+            .unwrap()
+            .get(&id)
+            .map(|r| r.worker.clone());
         match tx {
             Some(tx) => {
                 if let Err(e) = tx.send(WorkerMsg { job, reply }) {
@@ -847,7 +946,8 @@ impl Inner {
     async fn request(&self, id: AccountId, job: Job) -> Result<JobOutput> {
         let (tx, rx) = oneshot::channel();
         self.job(id, job, Some(tx));
-        rx.await.map_err(|_| coded(ErrorCode::Offline, "worker stopped"))?
+        rx.await
+            .map_err(|_| coded(ErrorCode::Offline, "worker stopped"))?
     }
 
     fn set_status(&self, id: AccountId, state: AccountState, error: Option<String>) {
@@ -864,7 +964,9 @@ impl Inner {
         };
         if changed && let Ok(cfg) = self.store.account(id) {
             let unread = self.store.inbox_unread().unwrap_or_default();
-            let _ = self.events.send(Event::AccountStatus(self.account_view(&cfg, &unread)));
+            let _ = self
+                .events
+                .send(Event::AccountStatus(self.account_view(&cfg, &unread)));
             self.refresh_unread();
         }
     }
@@ -876,7 +978,12 @@ impl Inner {
         let problem = {
             let map = self.accounts.lock().unwrap();
             map.values()
-                .find(|r| matches!(r.status.state, AccountState::AuthRequired | AccountState::Error))
+                .find(|r| {
+                    matches!(
+                        r.status.state,
+                        AccountState::AuthRequired | AccountState::Error
+                    )
+                })
                 .map(|r| r.status.error.clone().unwrap_or_default())
         };
         let key = (total, problem.clone());
@@ -887,8 +994,13 @@ impl Inner {
         }
         drop(last);
 
-        let shown: Vec<(MessageId, AccountId)> =
-            self.notified.lock().unwrap().iter().map(|(m, a)| (*m, *a)).collect();
+        let shown: Vec<(MessageId, AccountId)> = self
+            .notified
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|(m, a)| (*m, *a))
+            .collect();
         if shown.is_empty() {
             return;
         }
@@ -918,7 +1030,12 @@ impl Inner {
     }
 
     /// Decides whether and how to notify about freshly arrived messages.
-    fn notify_new(&self, account: &AccountConfig, candidates: &[MessageId], allowed: Option<&HashSet<MessageId>>) {
+    fn notify_new(
+        &self,
+        account: &AccountConfig,
+        candidates: &[MessageId],
+        allowed: Option<&HashSet<MessageId>>,
+    ) {
         let settings = self.settings.read().unwrap().clone();
         let _ = self.events.send(Event::MailNew {
             account_id: account.id,
@@ -945,7 +1062,7 @@ impl Inner {
         if items.is_empty() {
             return;
         }
-        items.sort_by(|a, b| b.date.cmp(&a.date));
+        items.sort_by_key(|a| std::cmp::Reverse(a.date));
         let total = items.len();
         {
             let mut n = self.notified.lock().unwrap();
@@ -958,8 +1075,16 @@ impl Inner {
             .take(3)
             .map(|s| NotifyItem {
                 message_id: s.id,
-                from_name: s.from.as_ref().map(|f| f.label().to_string()).unwrap_or_default(),
-                from_address: s.from.as_ref().map(|f| f.address.clone()).unwrap_or_default(),
+                from_name: s
+                    .from
+                    .as_ref()
+                    .map(|f| f.label().to_string())
+                    .unwrap_or_default(),
+                from_address: s
+                    .from
+                    .as_ref()
+                    .map(|f| f.address.clone())
+                    .unwrap_or_default(),
                 subject: s.subject.clone(),
                 snippet: s.snippet.clone(),
             })
@@ -1031,7 +1156,10 @@ async fn clock_jump_task(inner: Arc<Inner>) {
         let now = SystemTime::now();
         let elapsed = now.duration_since(last).unwrap_or_default();
         if elapsed > TICK + Duration::from_secs(45) {
-            info!(gap_s = elapsed.as_secs(), "clock jump: assuming resume from sleep");
+            info!(
+                gap_s = elapsed.as_secs(),
+                "clock jump: assuming resume from sleep"
+            );
             inner.reconnect.send_modify(|v| *v += 1);
             inner.outbox_kick.notify_one();
         }

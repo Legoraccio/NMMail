@@ -82,8 +82,8 @@ mod windows {
                 bail!("CredReadW failed: {err}");
             }
             let c = &*cred;
-            let data =
-                std::slice::from_raw_parts(c.CredentialBlob, c.CredentialBlobSize as usize).to_vec();
+            let data = std::slice::from_raw_parts(c.CredentialBlob, c.CredentialBlobSize as usize)
+                .to_vec();
             CredFree(cred as *const _);
             Ok(Some(data))
         }
@@ -156,7 +156,10 @@ mod windows {
             for (i, c) in chunks.iter().enumerate() {
                 write_raw(&target(key, i + 1), c)?;
             }
-            write_raw(&target(key, 0), format!("chunks:{}", chunks.len()).as_bytes())
+            write_raw(
+                &target(key, 0),
+                format!("chunks:{}", chunks.len()).as_bytes(),
+            )
         }
 
         fn delete(&self, key: &str) -> Result<()> {

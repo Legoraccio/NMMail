@@ -82,7 +82,14 @@ mod tests {
 
     #[test]
     fn roundtrip() {
-        for s in ["INBOX", "Posta in arrivo", "Élément envoyés", "日本語", "A&B", "Café & 🎉"] {
+        for s in [
+            "INBOX",
+            "Posta in arrivo",
+            "Élément envoyés",
+            "日本語",
+            "A&B",
+            "Café & 🎉",
+        ] {
             assert_eq!(decode(&encode(s)), s);
         }
         assert_eq!(decode("&AMk-l&AOk-ments envoy&AOk-s"), "Éléments envoyés");

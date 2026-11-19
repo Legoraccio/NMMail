@@ -18,17 +18,23 @@ use tokio::sync::mpsc;
 use tracing::{info, warn};
 use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, WPARAM};
 use windows::Win32::Globalization::GetUserDefaultUILanguage;
-use windows::Win32::NetworkManagement::IpHelper::{MIB_IPINTERFACE_ROW, MIB_NOTIFICATION_TYPE, NotifyIpInterfaceChange};
+use windows::Win32::NetworkManagement::IpHelper::{
+    MIB_IPINTERFACE_ROW, MIB_NOTIFICATION_TYPE, NotifyIpInterfaceChange,
+};
 use windows::Win32::Networking::WinSock::AF_UNSPEC;
-use windows::Win32::System::ProcessStatus::{EmptyWorkingSet, GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS, PROCESS_MEMORY_COUNTERS_EX};
+use windows::Win32::System::ProcessStatus::{
+    EmptyWorkingSet, GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS, PROCESS_MEMORY_COUNTERS_EX,
+};
 use windows::Win32::System::Threading::{
-    GetCurrentProcess, PROCESS_POWER_THROTTLING_CURRENT_VERSION, PROCESS_POWER_THROTTLING_EXECUTION_SPEED,
-    PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION, PROCESS_POWER_THROTTLING_STATE, ProcessPowerThrottling,
-    SetProcessInformation,
+    GetCurrentProcess, PROCESS_POWER_THROTTLING_CURRENT_VERSION,
+    PROCESS_POWER_THROTTLING_EXECUTION_SPEED, PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION,
+    PROCESS_POWER_THROTTLING_STATE, ProcessPowerThrottling, SetProcessInformation,
 };
 use windows::Win32::System::WinRT::{RO_INIT_MULTITHREADED, RoInitialize};
 use windows::Win32::UI::Shell::ShellExecuteW;
-use windows::Win32::UI::WindowsAndMessaging::{ASFW_ANY, AllowSetForegroundWindow, PostMessageW, SW_SHOWNORMAL};
+use windows::Win32::UI::WindowsAndMessaging::{
+    ASFW_ANY, AllowSetForegroundWindow, PostMessageW, SW_SHOWNORMAL,
+};
 use windows::core::{HSTRING, w};
 
 pub use pipe::{accept_loop, bind_ipc, connect_ipc};
@@ -66,8 +72,10 @@ pub fn prepare_process() {
         let _ = RoInitialize(RO_INIT_MULTITHREADED);
         let state = PROCESS_POWER_THROTTLING_STATE {
             Version: PROCESS_POWER_THROTTLING_CURRENT_VERSION,
-            ControlMask: PROCESS_POWER_THROTTLING_EXECUTION_SPEED | PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION,
-            StateMask: PROCESS_POWER_THROTTLING_EXECUTION_SPEED | PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION,
+            ControlMask: PROCESS_POWER_THROTTLING_EXECUTION_SPEED
+                | PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION,
+            StateMask: PROCESS_POWER_THROTTLING_EXECUTION_SPEED
+                | PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION,
         };
         if SetProcessInformation(
             GetCurrentProcess(),
@@ -85,7 +93,11 @@ pub fn prepare_process() {
 pub fn system_lang() -> Lang {
     // SAFETY: no arguments.
     let langid = unsafe { GetUserDefaultUILanguage() };
-    if langid & 0x3ff == 0x10 { Lang::It } else { Lang::En }
+    if langid & 0x3ff == 0x10 {
+        Lang::It
+    } else {
+        Lang::En
+    }
 }
 
 pub fn allow_foreground() {
@@ -106,7 +118,11 @@ fn icon_png() -> Option<String> {
         dir.join("nmmail.png"),
         dir.join("assets").join("nmmail.png"),
         // Development layout: target/<profile>/nmmaild.exe
-        dir.join("..").join("..").join("assets").join("icon").join("nmmail.png"),
+        dir.join("..")
+            .join("..")
+            .join("assets")
+            .join("icon")
+            .join("nmmail.png"),
     ];
     candidates
         .iter()
@@ -126,7 +142,9 @@ pub fn register(enable: bool) -> Result<()> {
 }
 
 pub fn spawn_daemon() -> Result<()> {
-    std::process::Command::new(exe_path()).arg("--background").spawn()?;
+    std::process::Command::new(exe_path())
+        .arg("--background")
+        .spawn()?;
     Ok(())
 }
 
@@ -138,7 +156,11 @@ fn ui_path() -> Option<PathBuf> {
     p.exists().then_some(p)
 }
 
-unsafe extern "system" fn net_changed(_ctx: *const c_void, _row: *const MIB_IPINTERFACE_ROW, _t: MIB_NOTIFICATION_TYPE) {
+unsafe extern "system" fn net_changed(
+    _ctx: *const c_void,
+    _row: *const MIB_IPINTERFACE_ROW,
+    _t: MIB_NOTIFICATION_TYPE,
+) {
     if let Some(p) = PLATFORM.get()
         && let Some(tx) = p.net_tx.get()
     {
@@ -292,7 +314,14 @@ impl Platform for NativePlatform {
         }
         // SAFETY: valid strings; ShellExecute launches the default browser.
         unsafe {
-            ShellExecuteW(None, w!("open"), &HSTRING::from(url), None, None, SW_SHOWNORMAL);
+            ShellExecuteW(
+                None,
+                w!("open"),
+                &HSTRING::from(url),
+                None,
+                None,
+                SW_SHOWNORMAL,
+            );
         }
     }
 
@@ -334,7 +363,9 @@ impl Platform for NativePlatform {
             *last = Some(Instant::now());
         }
         let Some(ui) = ui_path() else {
-            warn!("UI executable not found (set NMMAIL_UI or install NMMail.exe next to nmmaild.exe)");
+            warn!(
+                "UI executable not found (set NMMAIL_UI or install NMMail.exe next to nmmaild.exe)"
+            );
             return;
         };
         let mut cmd = std::process::Command::new(&ui);

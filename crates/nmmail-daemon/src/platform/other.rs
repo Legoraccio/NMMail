@@ -18,7 +18,11 @@ pub fn prepare_process() {}
 
 pub fn system_lang() -> Lang {
     let lang = std::env::var("LANG").unwrap_or_default();
-    if lang.starts_with("it") { Lang::It } else { Lang::En }
+    if lang.starts_with("it") {
+        Lang::It
+    } else {
+        Lang::En
+    }
 }
 
 pub fn allow_foreground() {}
@@ -28,7 +32,9 @@ pub fn register(_enable: bool) -> Result<()> {
 }
 
 pub fn spawn_daemon() -> Result<()> {
-    std::process::Command::new(std::env::current_exe()?).arg("--background").spawn()?;
+    std::process::Command::new(std::env::current_exe()?)
+        .arg("--background")
+        .spawn()?;
     Ok(())
 }
 
@@ -74,7 +80,11 @@ impl NativePlatform {
 
 impl Platform for NativePlatform {
     fn open_url(&self, url: &str) {
-        let opener = if cfg!(target_os = "macos") { "open" } else { "xdg-open" };
+        let opener = if cfg!(target_os = "macos") {
+            "open"
+        } else {
+            "xdg-open"
+        };
         let _ = std::process::Command::new(opener).arg(url).spawn();
     }
     fn notify(&self, n: &Notification) {

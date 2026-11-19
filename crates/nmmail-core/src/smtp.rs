@@ -58,13 +58,14 @@ pub async fn send(
     transport.send_raw(&envelope, raw).await.map_err(|e| {
         let msg = e.to_string();
         let lower = msg.to_lowercase();
-        let code = if lower.contains("535") || lower.contains("authentication") || lower.contains("534") {
-            ErrorCode::AuthRequired
-        } else if e.is_permanent() {
-            ErrorCode::Server
-        } else {
-            ErrorCode::Offline
-        };
+        let code =
+            if lower.contains("535") || lower.contains("authentication") || lower.contains("534") {
+                ErrorCode::AuthRequired
+            } else if e.is_permanent() {
+                ErrorCode::Server
+            } else {
+                ErrorCode::Offline
+            };
         coded(code, format!("SMTP: {msg}"))
     })?;
     Ok(())

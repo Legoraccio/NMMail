@@ -4,11 +4,16 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 
 use windows::Win32::Foundation::{HANDLE, HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
-use windows::Win32::System::Power::{POWERBROADCAST_SETTING, RegisterPowerSettingNotification, RegisterSuspendResumeNotification};
-use windows::Win32::System::RemoteDesktop::{NOTIFY_FOR_THIS_SESSION, WTSRegisterSessionNotification};
+use windows::Win32::System::Power::{
+    POWERBROADCAST_SETTING, RegisterPowerSettingNotification, RegisterSuspendResumeNotification,
+};
+use windows::Win32::System::RemoteDesktop::{
+    NOTIFY_FOR_THIS_SESSION, WTSRegisterSessionNotification,
+};
 use windows::Win32::System::SystemServices::GUID_CONSOLE_DISPLAY_STATE;
 use windows::Win32::UI::Shell::{
-    NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW, Shell_NotifyIconW,
+    NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NOTIFYICONDATAW,
+    Shell_NotifyIconW,
 };
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::core::{HSTRING, PCWSTR, w};
@@ -47,9 +52,16 @@ fn load_icon(hinst: HINSTANCE, id: u16) -> Option<HICON> {
     unsafe {
         let cx = GetSystemMetrics(SM_CXSMICON);
         let cy = GetSystemMetrics(SM_CYSMICON);
-        LoadImageW(Some(hinst), PCWSTR(id as usize as *const u16), IMAGE_ICON, cx, cy, LR_DEFAULTCOLOR)
-            .ok()
-            .map(|h| HICON(h.0))
+        LoadImageW(
+            Some(hinst),
+            PCWSTR(id as usize as *const u16),
+            IMAGE_ICON,
+            cx,
+            cy,
+            LR_DEFAULTCOLOR,
+        )
+        .ok()
+        .map(|h| HICON(h.0))
     }
 }
 
@@ -133,14 +145,28 @@ fn show_menu(hwnd: HWND) {
         add(menu, ID_CHECK, t(lang, S::CheckNow), MF_STRING);
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
         add(pause, ID_PAUSE_1H, t(lang, S::Pause1h), MF_STRING);
-        add(pause, ID_PAUSE_TOMORROW, t(lang, S::PauseTomorrow), MF_STRING);
+        add(
+            pause,
+            ID_PAUSE_TOMORROW,
+            t(lang, S::PauseTomorrow),
+            MF_STRING,
+        );
         add(
             pause,
             ID_RESUME,
             t(lang, S::Resume),
-            if state.paused { MF_STRING } else { MF_STRING | MF_GRAYED },
+            if state.paused {
+                MF_STRING
+            } else {
+                MF_STRING | MF_GRAYED
+            },
         );
-        let _ = AppendMenuW(menu, MF_POPUP, pause.0 as usize, &HSTRING::from(t(lang, S::Pause)));
+        let _ = AppendMenuW(
+            menu,
+            MF_POPUP,
+            pause.0 as usize,
+            &HSTRING::from(t(lang, S::Pause)),
+        );
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
         add(menu, ID_EXIT, t(lang, S::Exit), MF_STRING);
         let _ = SetMenuDefaultItem(menu, ID_OPEN as u32, 0);
@@ -165,7 +191,9 @@ fn show_menu(hwnd: HWND) {
 
 fn handle_command(cmd: usize) {
     let Some(p) = PLATFORM.get() else { return };
-    let Some(engine) = p.engine.get().cloned() else { return };
+    let Some(engine) = p.engine.get().cloned() else {
+        return;
+    };
     let now = nmmail_core::model::now_ms();
     match cmd {
         ID_OPEN => engine.show_ui(None),
@@ -175,7 +203,9 @@ fn handle_command(cmd: usize) {
         }
         ID_PAUSE_TOMORROW => {
             use chrono::{Duration, Local, TimeZone};
-            let tomorrow = (Local::now() + Duration::days(1)).date_naive().and_hms_opt(8, 0, 0);
+            let tomorrow = (Local::now() + Duration::days(1))
+                .date_naive()
+                .and_hms_opt(8, 0, 0);
             let until = tomorrow
                 .and_then(|t| Local.from_local_datetime(&t).single())
                 .map(|t| t.timestamp_millis())
@@ -274,7 +304,10 @@ pub fn run(on_ready: impl FnOnce(HWND)) {
             ..Default::default()
         };
         RegisterClassW(&wc);
-        TASKBAR_CREATED.store(RegisterWindowMessageW(w!("TaskbarCreated")) as isize, Ordering::Relaxed);
+        TASKBAR_CREATED.store(
+            RegisterWindowMessageW(w!("TaskbarCreated")) as isize,
+            Ordering::Relaxed,
+        );
         let Ok(hwnd) = CreateWindowExW(
             WINDOW_EX_STYLE::default(),
             class,
@@ -294,7 +327,11 @@ pub fn run(on_ready: impl FnOnce(HWND)) {
         };
         let h = HANDLE(hwnd.0);
         let _ = RegisterSuspendResumeNotification(h, DEVICE_NOTIFY_WINDOW_HANDLE);
-        let _ = RegisterPowerSettingNotification(h, &GUID_CONSOLE_DISPLAY_STATE, DEVICE_NOTIFY_WINDOW_HANDLE);
+        let _ = RegisterPowerSettingNotification(
+            h,
+            &GUID_CONSOLE_DISPLAY_STATE,
+            DEVICE_NOTIFY_WINDOW_HANDLE,
+        );
         let _ = WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
         update_icon(hwnd, true);
         on_ready(hwnd);

@@ -11,12 +11,20 @@ fn windows_resources() {
     use std::path::PathBuf;
 
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-    let assets = manifest_dir.join("..").join("..").join("assets").join("icon");
+    let assets = manifest_dir
+        .join("..")
+        .join("..")
+        .join("assets")
+        .join("icon");
     let out = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     let esc = |p: &std::path::Path| p.to_string_lossy().replace('\\', "\\\\");
 
     let mut rc = String::new();
-    for (id, name) in [(1, "nmmail.ico"), (2, "nmmail-unread.ico"), (3, "nmmail-offline.ico")] {
+    for (id, name) in [
+        (1, "nmmail.ico"),
+        (2, "nmmail-unread.ico"),
+        (3, "nmmail-offline.ico"),
+    ] {
         let p = assets.join(name);
         println!("cargo:rerun-if-changed={}", p.display());
         if p.exists() {

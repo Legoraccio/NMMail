@@ -48,7 +48,11 @@ impl AsyncRead for Stream {
 }
 
 impl AsyncWrite for Stream {
-    fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<io::Result<usize>> {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
         match self.get_mut() {
             Stream::Plain(s) => Pin::new(s).poll_write(cx, buf),
             Stream::Tls(s) => Pin::new(s.as_mut()).poll_write(cx, buf),
@@ -115,7 +119,12 @@ pub fn tls_config() -> Result<Arc<rustls::ClientConfig>> {
 async fn tcp_connect(host: &str, port: u16) -> Result<TcpStream> {
     let tcp = tokio::time::timeout(CONNECT_TIMEOUT, TcpStream::connect((host, port)))
         .await
-        .map_err(|_| coded(ErrorCode::Offline, format!("timeout connecting to {host}:{port}")))?
+        .map_err(|_| {
+            coded(
+                ErrorCode::Offline,
+                format!("timeout connecting to {host}:{port}"),
+            )
+        })?
         .map_err(|e| coded(ErrorCode::Offline, format!("{host}:{port}: {e}")))?;
     tcp.set_nodelay(true).ok();
     // Keepalive keeps NAT mappings warm and detects dead peers while idling.
@@ -170,9 +179,10 @@ pub fn xoauth2_payload(user: &str, token: &str) -> String {
 
 fn auth_error(e: async_imap::error::Error) -> anyhow::Error {
     match e {
-        async_imap::error::Error::No(msg) | async_imap::error::Error::Bad(msg) => {
-            coded(ErrorCode::AuthRequired, format!("authentication failed: {msg}"))
-        }
+        async_imap::error::Error::No(msg) | async_imap::error::Error::Bad(msg) => coded(
+            ErrorCode::AuthRequired,
+            format!("authentication failed: {msg}"),
+        ),
         other => anyhow::Error::new(other).context("authentication"),
     }
 }
@@ -194,10 +204,13 @@ pub async fn connect(server: &ServerConfig, creds: &Credentials) -> Result<(Sess
         Security::Starttls => {
             let mut c = async_imap::Client::new(Stream::Plain(tcp));
             read_greeting(&mut c).await?;
-            tokio::time::timeout(COMMAND_TIMEOUT, c.run_command_and_check_ok("STARTTLS", None))
-                .await
-                .map_err(|_| coded(ErrorCode::Offline, "STARTTLS timeout"))?
-                .context("STARTTLS")?;
+            tokio::time::timeout(
+                COMMAND_TIMEOUT,
+                c.run_command_and_check_ok("STARTTLS", None),
+            )
+            .await
+            .map_err(|_| coded(ErrorCode::Offline, "STARTTLS timeout"))?
+            .context("STARTTLS")?;
             let Stream::Plain(tcp) = c.into_inner() else {
                 unreachable!()
             };
@@ -208,9 +221,10 @@ pub async fn connect(server: &ServerConfig, creds: &Credentials) -> Result<(Sess
     let _ = &mut client;
     let auth = async {
         match creds {
-            Credentials::Password { user, password } => {
-                client.login(user, password).await.map_err(|(e, _)| auth_error(e))
-            }
+            Credentials::Password { user, password } => client
+                .login(user, password)
+                .await
+                .map_err(|(e, _)| auth_error(e)),
             Credentials::OAuth2 { user, access_token } => client
                 .authenticate(
                     "XOAUTH2",

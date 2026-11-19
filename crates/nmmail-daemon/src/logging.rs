@@ -14,7 +14,9 @@ pub fn init() {
         .filename_suffix("log")
         .max_log_files(7)
         .build(&dir);
-    let builder = tracing_subscriber::fmt().with_env_filter(filter).with_ansi(false);
+    let builder = tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_ansi(false);
     match file {
         Ok(file) if cfg!(debug_assertions) => {
             builder.with_writer(file.and(std::io::stderr)).init();

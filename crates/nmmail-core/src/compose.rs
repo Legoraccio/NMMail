@@ -77,7 +77,9 @@ fn strip_prefixes(subject: &str) -> &str {
     loop {
         let lower = s.to_lowercase();
         let mut stripped = false;
-        for p in ["re:", "r:", "fw:", "fwd:", "i:", "inoltro:", "aw:", "wg:", "rif:"] {
+        for p in [
+            "re:", "r:", "fw:", "fwd:", "i:", "inoltro:", "aw:", "wg:", "rif:",
+        ] {
             if lower.starts_with(p) {
                 s = s[p.len()..].trim_start();
                 stripped = true;
@@ -233,10 +235,7 @@ pub fn prepare(
                 "<p><br></p><div class=\"nm-quote\"><p>{}</p><blockquote type=\"cite\">{quoted}</blockquote></div>",
                 esc(&intro)
             );
-            let quoted_text: String = body_text
-                .lines()
-                .map(|l| format!("> {l}\n"))
-                .collect();
+            let quoted_text: String = body_text.lines().map(|l| format!("> {l}\n")).collect();
             (html, format!("\n\n{intro}\n{quoted_text}"))
         }
     };
@@ -245,7 +244,10 @@ pub fn prepare(
     let (in_reply_to, references) = match mode {
         Mode::Forward => (None, None),
         _ => {
-            let mid = orig.message_id.as_ref().map(|m| format!("<{}>", m.trim_matches(['<', '>'])));
+            let mid = orig
+                .message_id
+                .as_ref()
+                .map(|m| format!("<{}>", m.trim_matches(['<', '>'])));
             let mut refs = orig.references.clone().unwrap_or_default();
             if refs.is_empty()
                 && let Some(irt) = &orig.in_reply_to
@@ -308,7 +310,11 @@ fn msg_ids(s: &str) -> Vec<String> {
 
 /// Generates a Message-ID that does not leak the local host name.
 pub fn new_message_id(sender: &str) -> String {
-    let domain = sender.rsplit('@').next().filter(|d| !d.is_empty()).unwrap_or("nmmail.local");
+    let domain = sender
+        .rsplit('@')
+        .next()
+        .filter(|d| !d.is_empty())
+        .unwrap_or("nmmail.local");
     let mut rng = rand::rng();
     let a: u64 = rng.random();
     let b: u32 = rng.random();
@@ -329,7 +335,10 @@ pub fn build(
         .from(mb_addr(from))
         .subject(req.subject.clone())
         .message_id(message_id.clone())
-        .header("X-Mailer", mail_builder::headers::text::Text::new("NM Mail"));
+        .header(
+            "X-Mailer",
+            mail_builder::headers::text::Text::new("NM Mail"),
+        );
     if !req.to.is_empty() {
         b = b.to(mb_list(&req.to));
     }
@@ -366,7 +375,9 @@ pub fn build(
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "allegato".into());
-        let mime = mime_guess::from_path(path).first_or_octet_stream().to_string();
+        let mime = mime_guess::from_path(path)
+            .first_or_octet_stream()
+            .to_string();
         b = b.attachment(mime, name, bytes);
     }
     for (name, mime, bytes) in extra {
@@ -411,7 +422,10 @@ mod tests {
                 folder_id: 1,
                 subject: "RE: Re: Preventivo".into(),
                 from: Some(Addr::new(Some("Anna"), "anna@example.com")),
-                to: vec![Addr::new(None, "me@example.com"), Addr::new(None, "bob@example.com")],
+                to: vec![
+                    Addr::new(None, "me@example.com"),
+                    Addr::new(None, "bob@example.com"),
+                ],
                 date: 1_700_000_000_000,
                 snippet: String::new(),
                 seen: true,
@@ -444,7 +458,10 @@ mod tests {
         let cc: Vec<_> = p.cc.iter().map(|a| a.address.as_str()).collect();
         assert_eq!(cc, ["bob@example.com", "carl@example.com"]);
         assert_eq!(p.in_reply_to.as_deref(), Some("<m1@example.com>"));
-        assert_eq!(p.references.as_deref(), Some("<m0@example.com> <m1@example.com>"));
+        assert_eq!(
+            p.references.as_deref(),
+            Some("<m0@example.com> <m1@example.com>")
+        );
         assert!(p.text.contains("> Ciao"));
         assert!(p.html.contains("ha scritto"));
 
@@ -481,7 +498,10 @@ mod tests {
         assert!(mid.ends_with("@example.com"));
         let parsed = crate::mime::parse_full(&raw);
         assert_eq!(parsed.headers.subject, "Ciao è");
-        assert_eq!(parsed.headers.in_reply_to.as_deref(), Some("m1@example.com"));
+        assert_eq!(
+            parsed.headers.in_reply_to.as_deref(),
+            Some("m1@example.com")
+        );
         assert!(parsed.text.unwrap().contains("Ciao Anna"));
         assert_eq!(parsed.attachments.len(), 1);
     }
