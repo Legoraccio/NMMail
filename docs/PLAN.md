@@ -216,8 +216,8 @@ Ogni fase si chiude con build verde, test, commit e push.
 | 2 — Motore IMAP | ✅ IDLE con watchdog, catch-up per UID, CONDSTORE, worker on-demand, server di test |
 | 3 — Auth e invio | ✅ OAuth2 PKCE (Google/Microsoft), Credential Manager, SMTP + outbox offline |
 | 4 — Demone Windows | ✅ tray, toast con azioni, protocollo `nmmail:`, power/rete, EcoQoS, `mailto:` |
-| 5 — UI WinUI 3 | in corso |
-| 6 — Packaging | script build/install/uninstall e Inno Setup pronti; verifica finale in corso |
+| 5 — UI WinUI 3 | ✅ tre riquadri Fluent/Mica, lettore WebView2 isolato, composizione, ricerca, impostazioni, it/en, Native AOT |
+| 6 — Packaging | ✅ `scripts/build.ps1` (dist 78 MB), install/uninstall per utente, Inno Setup; verifica end-to-end UI + demone + notifiche |
 
 ### Misure (build release, Windows 11)
 
@@ -231,3 +231,14 @@ Ogni fase si chiude con build verde, test, commit e push.
 | Binario demone | < 8 MB | **6,9 MB** |
 | Click su notifica → azione eseguita | – | 24 ms |
 | Apertura messaggio in cache (IPC + render) | – | ~10 ms |
+| CPU demone in 1 ora con 2 account in IDLE | ~0% | **0,16 s** (0,0044%), 2 thread attivi |
+| Avvio UI Native AOT (pronta all'input) | < 1 s | **114 ms** (primo frame ~300 ms, a freddo ~530 ms) |
+| RAM UI con finestra aperta | – | ~140 MB + processi WebView2 (0 a finestra chiusa) |
+
+### Limiti noti della v1
+- Durante la sospensione (Modern Standby) Windows toglie la rete alle app desktop: le mail
+  arrivate nel frattempo vengono recuperate e notificate subito al risveglio.
+- Le notifiche riguardano la Posta in arrivo: mail spostate da regole del server in altre
+  cartelle non generano notifica (cartelle extra monitorate: roadmap).
+- Bozze non salvate sul server; contatori delle cartelle calcolati sulla cache locale (90 giorni).
+- Build ARM64 della UI: richiede gli strumenti MSVC ARM64 (non installati su questa macchina).
