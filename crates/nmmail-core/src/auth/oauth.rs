@@ -436,10 +436,10 @@ mod tests {
     #[test]
     fn id_token_email() {
         let payload = URL_SAFE_NO_PAD.encode(
-            br#"{"email":"mario@gmail.com","name":"Mario Rossi","tid":"9188040d-6c67-4c5b-b112-36a304b66dad"}"#,
+            br#"{"email":"mario@example.com","name":"Mario Rossi","tid":"9188040d-6c67-4c5b-b112-36a304b66dad"}"#,
         );
         let id = identity_from_id_token(&format!("h.{payload}.s")).unwrap();
-        assert_eq!(id.email, "mario@gmail.com");
+        assert_eq!(id.email, "mario@example.com");
         assert_eq!(id.name.as_deref(), Some("Mario Rossi"));
         let (_, smtp) = servers(Provider::Outlook, &id);
         assert_eq!(smtp.host, "smtp-mail.outlook.com");

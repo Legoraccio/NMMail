@@ -6,7 +6,7 @@ members = ["crates/nmmail-core", "crates/nmmail-daemon", "crates/nmmail-testserv
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
-license = "LicenseRef-Proprietary"
+license = "PolyForm-Noncommercial-1.0.0"
 publish = false
 
 [workspace.dependencies]

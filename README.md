@@ -87,3 +87,13 @@ Variabili utili: `NMMAIL_DATA_DIR` (cartella dati alternativa), `NMMAIL_LOG`
 ```
 
 In alternativa `installer\NMMail.iss` produce un setup con Inno Setup 6.
+
+## Licenza
+
+NM Mail è distribuito con licenza [PolyForm Noncommercial 1.0.0](LICENSE.md): puoi usarlo,
+studiarlo, modificarlo e ridistribuirlo **solo per scopi non commerciali** (uso personale,
+studio, ricerca, enti non profit). Ogni uso commerciale è riservato all'autore; per una licenza
+commerciale contatta [Roberto Di Miceli](https://github.com/Legoraccio).
+
+Inviando un contributo (pull request, patch) accetti che l'autore possa usarlo, modificarlo e
+rilicenziarlo, anche per scopi commerciali.

@@ -22,8 +22,8 @@ internal static class DemoData
 {
     public const long GmailId = 1;
     public const long OutlookId = 2;
-    public const string GmailAddress = "marco.bianchi@gmail.com";
-    public const string OutlookAddress = "marco.bianchi@outlook.it";
+    public const string GmailAddress = "marco.bianchi@example.com";
+    public const string OutlookAddress = "marco.bianchi@example.org";
     public const string OwnName = "Marco Bianchi";
 
     private static readonly CultureInfo It = CultureInfo.GetCultureInfo("it-IT");
@@ -97,7 +97,7 @@ internal static class DemoData
                 0.4, Seen: false, Flagged: true, Important: true),
             new(GmailId, 101, "ShopItalia", "ordini@shopitalia.example", "Il tuo ordine #402-1187733 è stato spedito",
                 "", 1.2, Seen: false, Remote: true, Html: OrderHtml()),
-            new(GmailId, 101, "Luca Ferrari", "luca.ferrari@gmail.com", "Foto della gita al lago di Garda 📸",
+            new(GmailId, 101, "Luca Ferrari", "luca.ferrari@example.com", "Foto della gita al lago di Garda 📸",
                 "Ehi Marco!\n\nEcco le foto di domenica: la luce sul lago era incredibile. Ne ho scelte tre, le altre te le passo su chiavetta quando ci vediamo.\n\nLa prossima volta saliamo fino a Malcesine con la funivia?\n\nLuca",
                 3.5, Seen: false, Attachments: ["garda-01.png", "garda-02.png", "garda-03.png"]),
             new(GmailId, 101, "Banca Aurora", "notifiche@bancaaurora.example", $"Estratto conto di {prevMonthName} disponibile",
@@ -105,7 +105,7 @@ internal static class DemoData
                 5, Attachments: [$"estratto-conto-{prevMonthName}.pdf"]),
             new(GmailId, 101, "Il Gusto della Settimana", "newsletter@gustosettimana.example", "5 ricette d'autunno con la zucca 🎃",
                 "", 7, Seen: false, Remote: true, Html: RecipesHtml()),
-            new(GmailId, 101, "Sara Conti", "sara.conti@outlook.it", "Cena di sabato?",
+            new(GmailId, 101, "Sara Conti", "sara.conti@example.org", "Cena di sabato?",
                 "Ciao Marco,\n\nsabato sera siamo da noi con Paolo e Francesca: ci sei? Pensavamo a una pizza fatta in casa verso le 20.\n\nFammi sapere entro giovedì così mi organizzo con l'impasto!\n\nSara",
                 26, Answered: true),
             new(GmailId, 101, "TrenoRapido", "biglietti@trenorapido.example", "Il tuo biglietto: Milano Centrale → Roma Termini",
@@ -114,9 +114,9 @@ internal static class DemoData
             new(GmailId, 101, "CodeHub", "notifications@codehub.example", "[nmmail] Nuova issue #42: notifiche duplicate dopo il resume",
                 "@marco-bianchi ha aperto una nuova issue in nmmail/nmmail:\n\n> Dopo il resume da Modern Standby arrivano due notifiche per la stessa mail.\n> Passi per riprodurre:\n> 1. sospendere il portatile con una IDLE attiva\n> 2. inviare una mail all'account\n> 3. riattivare il PC\n\nRispondi a questa e-mail o visualizza la issue su CodeHub.",
                 30, Seen: false, TextOnly: true),
-            new(GmailId, 101, "Francesca Ricci", "francesca.ricci@gmail.com", "Compleanno di Anna 🎂 — regalo di gruppo",
+            new(GmailId, 101, "Francesca Ricci", "francesca.ricci@example.com", "Compleanno di Anna 🎂 — regalo di gruppo",
                 "Ciao a tutti!\n\nPer il compleanno di Anna pensavamo a un buono per il corso di ceramica che desidera da mesi. Sono 25 euro a testa.\n\nChi partecipa mi scrive entro venerdì? Poi raccolgo io le quote.\n\nUn abbraccio,\nFrancesca",
-                50, Cc: "sara.conti@outlook.it, luca.ferrari@gmail.com"),
+                50, Cc: "sara.conti@example.org, luca.ferrari@example.com"),
             new(GmailId, 101, "Agenzia Viaggi Orizzonti", "prenotazioni@orizzontiviaggi.example", "Conferma prenotazione: Hotel Miradouro, Lisbona",
                 "Gentile Marco Bianchi,\n\nla tua prenotazione è confermata.\n\nHotel Miradouro ****, Lisbona\nCheck-in: venerdì dalle 14:00 — Check-out: lunedì entro le 11:00\nCamera doppia con vista sul Tago, colazione inclusa.\n\nIn allegato il voucher da presentare alla reception.\n\nBuon viaggio dallo staff di Orizzonti",
                 75, Attachments: ["voucher-hotel-lisbona.pdf"]),
@@ -126,7 +126,7 @@ internal static class DemoData
             new(GmailId, 101, "Comune di Valfiorita", "tributi@comune.valfiorita.example", "Promemoria: scadenza seconda rata TARI",
                 "Si ricorda che il 2 dicembre scade il pagamento della seconda rata della tassa sui rifiuti (TARI).\n\nIl modello di pagamento è disponibile nello sportello online del Comune.\n\nUfficio Tributi — Comune di Valfiorita",
                 9 * 24),
-            new(GmailId, 101, "Luca Ferrari", "luca.ferrari@gmail.com", "Re: Calcetto giovedì",
+            new(GmailId, 101, "Luca Ferrari", "luca.ferrari@example.com", "Re: Calcetto giovedì",
                 "Ci sono! Porto io il pallone nuovo.\n\nGiovedì alle 21:00, campo 2.\n\n> Allora confermiamo per giovedì?\n> Marco",
                 12 * 24, TextOnly: true),
             new(GmailId, 101, "Assicurazioni Sereno", "clienti@assicurazionisereno.example", "Rinnovo polizza auto: il tuo preventivo",
@@ -141,9 +141,9 @@ internal static class DemoData
 
             // ---- Gmail · other folders
             new(GmailId, 104, OwnName, GmailAddress, "Re: Cena di sabato?",
-                "Ciao Sara,\n\ncontate su di me! Porto il dolce: tiramisù va bene?\n\nMarco", 25, To: "sara.conti@outlook.it"),
+                "Ciao Sara,\n\ncontate su di me! Porto il dolce: tiramisù va bene?\n\nMarco", 25, To: "sara.conti@example.org"),
             new(GmailId, 104, OwnName, GmailAddress, "Calcetto giovedì",
-                "Ragazzi, allora confermiamo per giovedì alle 21?\n\nMarco", 12.5 * 24, To: "luca.ferrari@gmail.com"),
+                "Ragazzi, allora confermiamo per giovedì alle 21?\n\nMarco", 12.5 * 24, To: "luca.ferrari@example.com"),
             new(GmailId, 109, "Davide Moretti", "d.moretti@fornituregalli.example", $"Bozza contratto fornitura {nextYear}",
                 $"Buongiorno Marco,\n\nin allegato la bozza del contratto di fornitura per il {nextYear}. Le modifiche rispetto all'anno scorso sono evidenziate in giallo (articoli 4 e 9).\n\nResto a disposizione per una call.\n\nCordiali saluti,\nDavide Moretti\nForniture Galli S.r.l.",
                 6 * 24, Attachments: ["bozza-contratto.pdf"]),
@@ -171,7 +171,7 @@ internal static class DemoData
                 "Ciao squadra!\n\nVenerdì festeggiamo il rilascio della 2.4 con un pranzo alla pizzeria qui sotto, ore 13. Offre l'azienda!\n\nRoberto",
                 4),
             new(OutlookId, 201, "Sicurezza Account", "sicurezza@account-notify.example", "Nuovo accesso al tuo account da Windows",
-                "Abbiamo rilevato un nuovo accesso al tuo account marco.bianchi@outlook.it.\n\nDispositivo: Windows 11 — Milano, Italia\n\nSe sei stato tu, puoi ignorare questo messaggio. In caso contrario, modifica subito la password.",
+                "Abbiamo rilevato un nuovo accesso al tuo account marco.bianchi@example.org.\n\nDispositivo: Windows 11 — Milano, Italia\n\nSe sei stato tu, puoi ignorare questo messaggio. In caso contrario, modifica subito la password.",
                 24.5),
             new(OutlookId, 201, "Alessandro Marino", "a.marino@edilmarino.example", "Re: Preventivo ristrutturazione bagno",
                 "Buongiorno Marco,\n\ncome d'accordo le invio il preventivo dettagliato per la ristrutturazione del bagno: rifacimento impianti, sostituzione sanitari e piastrelle effetto pietra.\n\nI lavori potrebbero partire a gennaio, con una durata stimata di tre settimane.\n\nCordiali saluti,\nAlessandro Marino\nEdil Marino",
@@ -268,9 +268,9 @@ internal static class DemoData
 
     private static readonly (long Account, string Name, string Address, string Subject, string Body)[] s_incoming =
     [
-        (GmailId, "Sara Conti", "sara.conti@outlook.it", "Allora sabato confermato? 🍕", "Ciao Marco! Ho comprato tutto per l'impasto, ci vediamo sabato alle 20. Porta solo il buonumore!\n\nSara"),
+        (GmailId, "Sara Conti", "sara.conti@example.org", "Allora sabato confermato? 🍕", "Ciao Marco! Ho comprato tutto per l'impasto, ci vediamo sabato alle 20. Porta solo il buonumore!\n\nSara"),
         (OutlookId, "Chiara Lombardi", "chiara.lombardi@aurorasoftware.example", "Domanda veloce sui requisiti", "Ciao Marco,\n\nla sincronizzazione delle cartelle personalizzate rientra nella prima release o la spostiamo alla 2.5?\n\nGrazie,\nChiara"),
-        (GmailId, "Luca Ferrari", "luca.ferrari@gmail.com", "Funivia Malcesine — orari", "Ho controllato: la prima corsa è alle 8:00, l'ultima discesa alle 17:45. Ci organizziamo per domenica prossima?"),
+        (GmailId, "Luca Ferrari", "luca.ferrari@example.com", "Funivia Malcesine — orari", "Ho controllato: la prima corsa è alle 8:00, l'ultima discesa alle 17:45. Ci organizziamo per domenica prossima?"),
         (OutlookId, "IT Helpdesk", "helpdesk@aurorasoftware.example", "Manutenzione completata", "La manutenzione del server di posta è stata completata con successo. Tutti i servizi sono di nuovo disponibili.\n\nIT Helpdesk"),
         (GmailId, "ShopItalia", "ordini@shopitalia.example", "Il tuo pacco arriva oggi", "Il corriere consegnerà il tuo ordine #402-1187733 oggi tra le 14:00 e le 18:00."),
         (OutlookId, "Giulia Romano", "giulia.romano@studioromano.example", "Verbale riunione", "Ciao,\n\nin allegato trovate il verbale della riunione di oggi con le azioni concordate.\n\nGiulia"),
@@ -302,7 +302,7 @@ internal static class DemoData
         for (var i = 0; i < subjects.Length; i++)
         {
             var seed = new Seed(accountId, folderId, i % 2 == 0 ? "Servizio Clienti" : "Paolo Neri",
-                i % 2 == 0 ? "info@servizi.example" : "paolo.neri@gmail.com", subjects[i],
+                i % 2 == 0 ? "info@servizi.example" : "paolo.neri@example.com", subjects[i],
                 "Messaggio meno recente scaricato dal server su richiesta (oltre la finestra della cache locale).", 0);
             var m = Build(startId + i, seed, baseDate.AddDays(-(7 * (i + 1))));
             list.Add(m);
