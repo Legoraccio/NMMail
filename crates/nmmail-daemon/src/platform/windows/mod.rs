@@ -374,8 +374,11 @@ impl Platform for NativePlatform {
     }
 
     fn set_autostart(&self, enabled: bool, user_initiated: bool) -> Result<()> {
-        // Development builds never register themselves to start at login.
-        if cfg!(debug_assertions) && std::env::var_os("NMMAIL_FORCE_AUTOSTART").is_none() {
+        // Development builds and instances with a custom data folder (tests,
+        // portable runs) never register themselves to start at login: the
+        // autostarted process would not even use the same data folder.
+        let dev = cfg!(debug_assertions) || std::env::var_os("NMMAIL_DATA_DIR").is_some();
+        if dev && std::env::var_os("NMMAIL_FORCE_AUTOSTART").is_none() {
             return Ok(());
         }
         registry::set_autostart(&exe_path().to_string_lossy(), enabled, user_initiated)
