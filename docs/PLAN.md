@@ -206,3 +206,28 @@ Ogni fase si chiude con build verde, test, commit e push.
 - Linux: shell GTK4/libadwaita + `platform/linux` (notifiche D-Bus, autostart XDG,
   StatusNotifierItem, logind PrepareForSleep, NetworkManager).
 - Vista a conversazioni, cartelle extra monitorate, regole/filtri locali, PGP/S-MIME.
+
+## 10. Stato di avanzamento
+
+| Fase | Stato |
+|---|---|
+| 0 — Fondamenta | ✅ repo privato, workspace, CI GitHub Actions |
+| 1 — Storage e MIME | ✅ SQLite WAL + FTS5, parsing MIME, HTML sanitizzato con CSP |
+| 2 — Motore IMAP | ✅ IDLE con watchdog, catch-up per UID, CONDSTORE, worker on-demand, server di test |
+| 3 — Auth e invio | ✅ OAuth2 PKCE (Google/Microsoft), Credential Manager, SMTP + outbox offline |
+| 4 — Demone Windows | ✅ tray, toast con azioni, protocollo `nmmail:`, power/rete, EcoQoS, `mailto:` |
+| 5 — UI WinUI 3 | in corso |
+| 6 — Packaging | script build/install/uninstall e Inno Setup pronti; verifica finale in corso |
+
+### Misure (build release, Windows 11)
+
+| Metrica | Obiettivo | Misurato |
+|---|---|---|
+| Latenza consegna → notifica (server locale) | < 2 s | **1,2 ms** (test `initial_sync_does_not_notify_and_push_is_instant`) |
+| Ripresa dopo resume con link "mezzo aperto" | < 3 s | < 1 s (test `resume_reconnects_from_half_open_link`) |
+| Link morto dopo cambio rete | rilevato | ≤ 10 s + backoff 1 s (test `network_change_detects_dead_link`) |
+| RAM privata demone, 2 account in IDLE | < 10 MB | **3,4 MB** (working set 3,5 MB dopo il trim) |
+| CPU a riposo, 2 account in IDLE | ~0% | **16 ms in 110 s** (≈0,015%) |
+| Binario demone | < 8 MB | **6,9 MB** |
+| Click su notifica → azione eseguita | – | 24 ms |
+| Apertura messaggio in cache (IPC + render) | – | ~10 ms |

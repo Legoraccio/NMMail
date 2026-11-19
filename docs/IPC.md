@@ -129,6 +129,7 @@ type Settings = {
 | `settings.set` | `Partial<Settings>` | `{settings: Settings}` |
 | `sync.now` | `{accountId?}` | `{}` |
 | `notifications.pause` | `{until: number \| null}` | `{}` |
+| `notifications.test` | – | `{status}` — mostra una notifica di prova; `status` es. `"enabled; actionCenter=1"` oppure `"disabledForUser; …"` se l'utente le ha disattivate in Windows |
 | `ui.show` | `{messageId?}` | `{}` — porta la UI in primo piano (avviandola se serve) |
 | `activate` | `{uri}` | `{}` — uso interno: click sulle notifiche (`nmmail://open?msg=…`, `markread`, `archive`, `delete`) |
 

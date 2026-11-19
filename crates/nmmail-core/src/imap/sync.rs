@@ -133,7 +133,13 @@ pub async fn fetch_headers(
         stream.try_collect::<Vec<_>>().await
     })
     .await?;
-    Ok(fetches.iter().filter_map(new_message_from_fetch).collect())
+    // Servers may interleave unsolicited FETCH responses (flag changes of other
+    // messages) with the results: only entries carrying the header are ours.
+    Ok(fetches
+        .iter()
+        .filter(|f| f.header().is_some())
+        .filter_map(new_message_from_fetch)
+        .collect())
 }
 
 /// Fetches complete raw messages for UIDs (folder must be selected).
