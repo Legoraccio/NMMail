@@ -497,6 +497,10 @@ public sealed class DaemonClient : IDaemonClient
     public Task SyncFolderAsync(long folderId, CancellationToken ct = default) =>
         CallEmptyAsync("folders.sync", new FolderIdParams { FolderId = folderId }, IpcJson.Default.FolderIdParams, ct);
 
+    public async Task<Folder> SetFolderMonitoredAsync(long folderId, bool monitored, CancellationToken ct = default) =>
+        Require((await CallAsync("folders.setMonitored", new SetMonitoredParams { FolderId = folderId, Monitored = monitored },
+            IpcJson.Default.SetMonitoredParams, IpcJson.Default.FolderResult, ct))?.Folder, "folders.setMonitored");
+
     public async Task<MessagePage> ListMessagesAsync(ListMessagesParams request, CancellationToken ct = default) =>
         await CallAsync("messages.list", request, IpcJson.Default.ListMessagesParams, IpcJson.Default.MessagePage, ct) ?? new MessagePage();
 

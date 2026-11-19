@@ -31,6 +31,11 @@ public sealed partial class SidebarView : UserControl
         if ((sender as FrameworkElement)?.Tag is SidebarItem item) ViewModel.RequestReauth(item);
     }
 
+    private void ToggleMonitoring_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is SidebarItem item) _ = ViewModel.SetFolderMonitoredAsync(item, !item.IsMonitored);
+    }
+
     private void NewMail_Click(object sender, RoutedEventArgs e) => ViewModel.Compose(ComposeModes.New);
 
     private void Settings_Click(object sender, RoutedEventArgs e) => SettingsRequested?.Invoke(this, EventArgs.Empty);

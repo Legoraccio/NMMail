@@ -70,6 +70,13 @@ struct FolderParam {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MonitorParams {
+    folder_id: i64,
+    monitored: bool,
+}
+
+#[derive(Deserialize)]
 struct ProviderParam {
     provider: Provider,
 }
@@ -208,6 +215,10 @@ pub async fn dispatch(engine: &Engine, method: &str, params: &Value) -> Result<V
             let f: FolderParam = p(params)?;
             engine.sync_folder(f.folder_id)?;
             json!({})
+        }
+        "folders.setMonitored" => {
+            let m: MonitorParams = p(params)?;
+            json!({ "folder": engine.set_folder_monitored(m.folder_id, m.monitored)? })
         }
         "messages.list" => {
             let l: ListParams = p(params)?;

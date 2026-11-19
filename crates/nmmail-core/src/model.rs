@@ -230,6 +230,8 @@ pub struct Folder {
     pub unread: u32,
     pub total: u32,
     pub selectable: bool,
+    /// New mail in this folder is pushed and notified (always true for INBOX).
+    pub monitored: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]

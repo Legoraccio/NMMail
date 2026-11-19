@@ -585,3 +585,209 @@ async fn signing_in_again_updates_the_existing_account() {
             .is_some()
     );
 }
+
+/// Waits until the account's folder list (refreshed by the worker) has `name`.
+async fn wait_folder(env: &Env, name: &str) -> Folder {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        if let Some(f) = env
+            .engine
+            .folders(Some(env.account.id))
+            .unwrap()
+            .into_iter()
+            .find(|f| f.name == name)
+        {
+            return f;
+        }
+        assert!(Instant::now() < deadline, "folder {name} never listed");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+/// Waits until a folder's cache holds `total` messages.
+async fn wait_total(env: &Env, folder_id: FolderId, total: u32) {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        let f = env
+            .engine
+            .folders(Some(env.account.id))
+            .unwrap()
+            .into_iter()
+            .find(|f| f.id == folder_id)
+            .unwrap();
+        if f.total == total {
+            return;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "folder total stuck at {}",
+            f.total
+        );
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn monitored_folder_is_pushed_and_notified() {
+    let mut env = setup(0).await;
+    // A folder filled by a server-side rule, already holding an old message.
+    assert!(env.server.create_mailbox(USER, "Lavoro"));
+    env.server
+        .deliver(USER, "Lavoro", &mail("Vecchio messaggio", "gia' qui"));
+    env.engine.sync_now(Some(env.account.id));
+    let work = wait_folder(&env, "Lavoro").await;
+    assert!(!work.monitored);
+
+    let work = env.engine.set_folder_monitored(work.id, true).unwrap();
+    assert!(work.monitored);
+    // First sync of the folder: cached, never notified.
+    wait_total(&env, work.id, 1).await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(env.platform.notes.lock().unwrap().is_empty());
+
+    let t0 = Instant::now();
+    env.server.deliver(
+        USER,
+        "Lavoro",
+        &mail("Spostata da una regola", "Arriva direttamente in Lavoro"),
+    );
+    let ids = wait_new_mail(&mut env, Duration::from_secs(5))
+        .await
+        .expect("push from the monitored folder not received");
+    let latency = t0.elapsed();
+    assert_eq!(ids.len(), 1);
+    assert!(latency < Duration::from_millis(2000), "latency {latency:?}");
+    {
+        let notes = env.platform.notes.lock().unwrap();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].items[0].subject, "Spostata da una regola");
+        assert_eq!(notes[0].folder.as_deref(), Some("Lavoro"));
+    }
+
+    // INBOX cannot be turned off; turning the folder off stops its watcher.
+    let inbox = inbox(&env);
+    assert!(
+        env.engine
+            .set_folder_monitored(inbox.id, false)
+            .unwrap()
+            .monitored
+    );
+    assert!(
+        !env.engine
+            .set_folder_monitored(work.id, false)
+            .unwrap()
+            .monitored
+    );
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    env.server
+        .deliver(USER, "Lavoro", &mail("Dopo la disattivazione", "silenzio"));
+    assert!(
+        wait_new_mail(&mut env, Duration::from_millis(1500))
+            .await
+            .is_none()
+    );
+    assert_eq!(env.platform.notes.lock().unwrap().len(), 1);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn monitored_folders_are_capped_per_account() {
+    let env = setup(0).await;
+    for i in 1..=6 {
+        assert!(env.server.create_mailbox(USER, &format!("Regola{i}")));
+    }
+    env.engine.sync_now(Some(env.account.id));
+    let mut ids = Vec::new();
+    for i in 1..=6 {
+        ids.push(wait_folder(&env, &format!("Regola{i}")).await.id);
+    }
+    for id in &ids[..5] {
+        assert!(
+            env.engine
+                .set_folder_monitored(*id, true)
+                .unwrap()
+                .monitored
+        );
+    }
+    let err = env.engine.set_folder_monitored(ids[5], true).unwrap_err();
+    assert_eq!(
+        nmmail_core::error::code_of(&err),
+        nmmail_core::error::ErrorCode::BadRequest
+    );
+    // Re-enabling an already monitored folder is not counted twice.
+    assert!(
+        env.engine
+            .set_folder_monitored(ids[0], true)
+            .unwrap()
+            .monitored
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn gmail_all_mail_notifies_only_mail_that_skipped_the_inbox() {
+    let mut env = setup_cfg(
+        Config {
+            gmail_mode: true,
+            ..Config::default()
+        },
+        0,
+    )
+    .await;
+    let all_mail = wait_folder(&env, "[Gmail]/All Mail").await;
+    assert_eq!(all_mail.role, Some(FolderRole::All));
+    env.engine.set_folder_monitored(all_mail.id, true).unwrap();
+    tokio::time::sleep(Duration::from_millis(800)).await;
+
+    // 1. Normal mail: INBOX plus its copy in All Mail (same X-GM-MSGID, as Gmail does).
+    let uid = env
+        .server
+        .deliver(USER, "INBOX", &mail("Normale", "in arrivo"));
+    wait_new_mail(&mut env, Duration::from_secs(5))
+        .await
+        .expect("INBOX push");
+    {
+        let imap = ServerConfig {
+            host: "127.0.0.1".into(),
+            port: env.server.imap_addr().port(),
+            security: Security::None,
+        };
+        let creds = nmmail_core::imap::conn::Credentials::Password {
+            user: USER.into(),
+            password: "test".into(),
+        };
+        let (mut s, _) = nmmail_core::imap::conn::connect(&imap, &creds)
+            .await
+            .unwrap();
+        s.select("INBOX").await.unwrap();
+        s.uid_copy(uid.to_string(), "[Gmail]/All Mail")
+            .await
+            .unwrap();
+        s.logout().await.unwrap();
+    }
+    tokio::time::sleep(Duration::from_millis(1000)).await;
+    assert_eq!(
+        env.platform.notes.lock().unwrap().len(),
+        1,
+        "the All Mail copy of an INBOX message must not notify again"
+    );
+
+    // 2. Mail filtered past the inbox: only in All Mail.
+    env.server.deliver(
+        USER,
+        "[Gmail]/All Mail",
+        &mail("Filtrata fuori dalla posta in arrivo", "etichetta"),
+    );
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while env.platform.notes.lock().unwrap().len() < 2 {
+        assert!(Instant::now() < deadline, "skip-inbox mail not notified");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    let notes = env.platform.notes.lock().unwrap();
+    assert_eq!(notes.len(), 2);
+    assert_eq!(notes[0].items[0].subject, "Normale");
+    assert_eq!(notes[0].folder, None);
+    assert_eq!(
+        notes[1].items[0].subject,
+        "Filtrata fuori dalla posta in arrivo"
+    );
+    assert_eq!(notes[1].folder.as_deref(), Some("Tutti i messaggi"));
+}

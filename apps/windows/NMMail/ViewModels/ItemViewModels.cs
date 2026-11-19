@@ -166,6 +166,19 @@ public sealed partial class SidebarItem : ObservableObject
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
 
+    /// <summary>The folder's new mail is pushed and notified (rules/filters).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowMonitoredBell), nameof(MonitorMenuText))]
+    public partial bool IsMonitored { get; set; }
+
+    /// <summary>The bell marks monitored folders other than the INBOX (always watched).</summary>
+    public bool ShowMonitoredBell => IsMonitored && Folder?.Role != FolderRoles.Inbox;
+
+    /// <summary>Only real folders other than the INBOX can be toggled.</summary>
+    public bool CanToggleMonitoring => Kind == SidebarKind.Folder && Folder is { Selectable: true } f && f.Role != FolderRoles.Inbox;
+
+    public string MonitorMenuText => Loc.Get(IsMonitored ? "Sidebar_StopNotifyFolder" : "Sidebar_NotifyFolder");
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StateGlyph), nameof(StateBrush), nameof(ShowReauth), nameof(IsConnecting), nameof(ShowStateGlyph), nameof(StateGlyphSize))]
     public partial string State { get; set; }
@@ -248,6 +261,8 @@ public sealed partial class SidebarItem : ObservableObject
         Depth = Math.Max(0, folder.Depth);
         Title = string.IsNullOrWhiteSpace(folder.DisplayName) ? folder.Name : folder.DisplayName;
         Glyph = Glyphs.ForRole(folder.Role);
+        IsMonitored = folder.Monitored || folder.Role == FolderRoles.Inbox;
+        OnPropertyChanged(nameof(CanToggleMonitoring));
         Unread = folder.Role is FolderRoles.Sent or FolderRoles.Drafts or FolderRoles.Trash or FolderRoles.Spam or FolderRoles.All
             ? 0 // unread counts of these folders are noise
             : folder.Unread;

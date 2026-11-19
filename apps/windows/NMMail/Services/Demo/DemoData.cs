@@ -55,7 +55,7 @@ internal static class DemoData
         F(107, GmailId, "[Gmail]/Spam", "Spam", FolderRoles.Spam),
         F(108, GmailId, "[Gmail]/Cestino", "Cestino", FolderRoles.Trash),
         F(109, GmailId, "Lavoro", "Lavoro", null),
-        F(110, GmailId, "Lavoro/Progetti", "Progetti", null, parent: 109, depth: 1),
+        F(110, GmailId, "Lavoro/Progetti", "Progetti", null, parent: 109, depth: 1, monitored: true),
         F(111, GmailId, "Viaggi", "Viaggi", null),
 
         F(201, OutlookId, "Inbox", "Posta in arrivo", FolderRoles.Inbox),
@@ -64,12 +64,17 @@ internal static class DemoData
         F(204, OutlookId, "Archive", "Archivio", FolderRoles.Archive),
         F(205, OutlookId, "Junk", "Posta indesiderata", FolderRoles.Spam),
         F(206, OutlookId, "Deleted", "Posta eliminata", FolderRoles.Trash),
-        F(207, OutlookId, "Fatture", "Fatture", null),
+        F(207, OutlookId, "Fatture", "Fatture", null, monitored: true),
         F(208, OutlookId, "Fatture/2025", "2025", null, parent: 207, depth: 1),
     ];
 
-    private static Folder F(long id, long account, string name, string display, string? role, long? parent = null, int depth = 0) =>
-        new() { Id = id, AccountId = account, Name = name, DisplayName = display, Role = role, ParentId = parent, Depth = depth, Selectable = true };
+    private static Folder F(long id, long account, string name, string display, string? role, long? parent = null, int depth = 0,
+        bool monitored = false) =>
+        new()
+        {
+            Id = id, AccountId = account, Name = name, DisplayName = display, Role = role, ParentId = parent, Depth = depth, Selectable = true,
+            Monitored = monitored || role == FolderRoles.Inbox,
+        };
 
     private sealed record Seed(
         long Account, long Folder, string FromName, string FromAddress, string Subject, string Body,

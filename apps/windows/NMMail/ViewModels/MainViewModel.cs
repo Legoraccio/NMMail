@@ -453,6 +453,29 @@ public sealed partial class MainViewModel : ObservableObject
         if (item.Account is { } account) ReauthRequested?.Invoke(this, account);
     }
 
+    /// <summary>Turns instant notifications for a folder on/off (mail moved there by server rules/filters).</summary>
+    public async Task SetFolderMonitoredAsync(SidebarItem item, bool monitored)
+    {
+        if (!item.CanToggleMonitoring || item.Folder is not { } folder) return;
+        try
+        {
+            var updated = await _client.SetFolderMonitoredAsync(folder.Id, monitored);
+            item.Update(updated);
+            ShowNotice(
+                Loc.Get(updated.Monitored ? "Notice_FolderMonitored" : "Notice_FolderUnmonitored"),
+                item.Title,
+                InfoBarSeverity.Success);
+        }
+        catch (DaemonException ex) when (monitored && ex.Code == DaemonErrorCodes.BadRequest)
+        {
+            ShowNotice(Loc.Get("Error_Action"), Loc.Get("Error_MonitoredLimit"), InfoBarSeverity.Warning, autoHide: false);
+        }
+        catch (Exception ex)
+        {
+            ShowError(Loc.Get("Error_Action"), ex);
+        }
+    }
+
     public long? DefaultAccountId()
     {
         if (_selectedSidebar.Folder is { } folder) return folder.AccountId;

@@ -199,6 +199,8 @@ public sealed class Folder
     public int Unread { get; set; }
     public int Total { get; set; }
     public bool Selectable { get; set; } = true;
+    /// <summary>New mail here is pushed and notified (always true for INBOX).</summary>
+    public bool Monitored { get; set; }
 
     public Folder Clone() => (Folder)MemberwiseClone();
 }
@@ -312,6 +314,12 @@ public sealed class UpdateAccountParams
     public string? DisplayName { get; set; }
     public bool? Notify { get; set; }
     public string? NotifyFilter { get; set; }
+}
+
+public sealed class SetMonitoredParams
+{
+    public long FolderId { get; set; }
+    public bool Monitored { get; set; }
 }
 
 public sealed class FolderIdParams
@@ -472,6 +480,11 @@ public sealed class AccountResult
 public sealed class FoldersResult
 {
     public Folder[] Folders { get; set; } = [];
+}
+
+public sealed class FolderResult
+{
+    public Folder? Folder { get; set; }
 }
 
 public sealed class MessagePage

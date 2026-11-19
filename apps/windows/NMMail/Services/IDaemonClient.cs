@@ -53,6 +53,8 @@ public interface IDaemonClient : IAsyncDisposable
 
     Task<IReadOnlyList<Folder>> ListFoldersAsync(long? accountId = null, CancellationToken ct = default);
     Task SyncFolderAsync(long folderId, CancellationToken ct = default);
+    /// <summary>Instant push + notifications for a folder (mail moved by rules/filters).</summary>
+    Task<Folder> SetFolderMonitoredAsync(long folderId, bool monitored, CancellationToken ct = default);
 
     Task<MessagePage> ListMessagesAsync(ListMessagesParams request, CancellationToken ct = default);
     Task<MessagePage> LoadOlderAsync(long folderId, long beforeDate, CancellationToken ct = default);

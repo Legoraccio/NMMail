@@ -120,6 +120,12 @@
   <data name="Sidebar_NewMail.Text" xml:space="preserve"><value>New message</value></data>
   <data name="Sidebar_Settings.Text" xml:space="preserve"><value>Settings</value></data>
   <data name="Sidebar_Reauth.Content" xml:space="preserve"><value>Sign in again</value></data>
+  <data name="Sidebar_NotifyFolder" xml:space="preserve"><value>Notify me instantly about new mail in this folder</value></data>
+  <data name="Sidebar_StopNotifyFolder" xml:space="preserve"><value>Stop notifying me about this folder</value></data>
+  <data name="Sidebar_MonitoredBell.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Instant notifications are on for this folder</value></data>
+  <data name="Notice_FolderMonitored" xml:space="preserve"><value>Instant notifications turned on</value></data>
+  <data name="Notice_FolderUnmonitored" xml:space="preserve"><value>Notifications turned off</value></data>
+  <data name="Error_MonitoredLimit" xml:space="preserve"><value>You can turn on instant notifications for at most 5 folders per account (besides the Inbox).</value></data>
 
   <data name="List_ClearSearch.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Close search (Esc)</value></data>
   <data name="List_ClearSearch.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Close search</value></data>

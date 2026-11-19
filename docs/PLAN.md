@@ -205,9 +205,15 @@ Ogni fase si chiude con build verde, test, commit e push.
   NSStatusItem, NSWorkspace sleep/wake) sullo stesso demone e protocollo.
 - Linux: shell GTK4/libadwaita + `platform/linux` (notifiche D-Bus, autostart XDG,
   StatusNotifierItem, logind PrepareForSleep, NetworkManager).
-- Vista a conversazioni, cartelle extra monitorate, regole/filtri locali, PGP/S-MIME.
+- Vista a conversazioni, regole/filtri locali, PGP/S-MIME.
 
 ## 10. Stato di avanzamento
+
+**Dopo la v1**: cartelle monitorate. Le mail che le regole di Outlook o i filtri di Gmail
+spostano fuori dalla Posta in arrivo possono essere notificate all'istante: per ogni cartella
+scelta il demone tiene un watcher IDLE dedicato (stessa robustezza dell'INBOX). Niente doppioni:
+per Gmail si scartano i messaggi con etichetta `\Inbox`/`\Sent`/`\Draft` (es. "Tutti i
+messaggi") e ogni Message-ID viene notificato una sola volta; la notifica indica la cartella.
 
 | Fase | Stato |
 |---|---|
@@ -239,7 +245,8 @@ Ogni fase si chiude con build verde, test, commit e push.
 ### Limiti noti della v1
 - Durante la sospensione (Modern Standby) Windows toglie la rete alle app desktop: le mail
   arrivate nel frattempo vengono recuperate e notificate subito al risveglio.
-- Le notifiche riguardano la Posta in arrivo: mail spostate da regole del server in altre
-  cartelle non generano notifica (cartelle extra monitorate: roadmap).
+- Le cartelle diverse dalla Posta in arrivo (mail spostate da regole/filtri del server) sono
+  notificate solo se attivate dall'utente (menu della cartella → "Notifica subito…"), fino a
+  5 per account: ognuna usa una connessione IDLE dedicata.
 - Bozze non salvate sul server; contatori delle cartelle calcolati sulla cache locale (90 giorni).
 - Build ARM64 della UI: richiede gli strumenti MSVC ARM64 (non installati su questa macchina).

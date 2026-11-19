@@ -367,6 +367,23 @@ public sealed class FakeDaemonClient(DispatcherQueue dispatcher) : IDaemonClient
         Post(() => MessagesChanged?.Invoke(this, new MessagesChangedEvent { AccountId = accountId, FolderIds = [folderId] }));
     }
 
+    public async Task<Folder> SetFolderMonitoredAsync(long folderId, bool monitored, CancellationToken ct = default)
+    {
+        await Latency();
+        EnsureConnected();
+        var folder = FindFolder(folderId) ?? throw new DaemonException(DaemonErrorCodes.NotFound, $"folder {folderId} not found");
+        if (folder.Role == FolderRoles.Inbox) return folder.Clone();
+        if (monitored && !folder.Monitored &&
+            _folders.Count(f => f.AccountId == folder.AccountId && f.Monitored && f.Role != FolderRoles.Inbox) >= 5)
+        {
+            throw new DaemonException(DaemonErrorCodes.BadRequest, "at most 5 monitored folders per account");
+        }
+        folder.Monitored = monitored;
+        var accountId = folder.AccountId;
+        Post(() => FoldersChanged?.Invoke(this, new FoldersChangedEvent { AccountId = accountId }));
+        return folder.Clone();
+    }
+
     public async Task<MessagePage> ListMessagesAsync(ListMessagesParams request, CancellationToken ct = default)
     {
         await Latency(35);

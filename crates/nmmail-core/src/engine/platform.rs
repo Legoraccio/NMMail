@@ -28,6 +28,8 @@ pub struct Notification {
     pub show_preview: bool,
     /// UI language setting: "system", "it" or "en".
     pub language: String,
+    /// Folder the mail arrived in, when it is not the INBOX (moved by a rule/filter).
+    pub folder: Option<String>,
 }
 
 pub trait Platform: Send + Sync + 'static {

@@ -563,6 +563,38 @@ pub async fn expunge_uids(session: &mut Session, uids: &[u32], caps: Caps) -> Re
     Ok(())
 }
 
+/// Gmail: labels (`X-GM-LABELS`) of `uids` in the selected folder.
+pub async fn gmail_labels(
+    session: &mut Session,
+    uids: &[u32],
+) -> Result<std::collections::HashMap<u32, Vec<String>>> {
+    let mut out = std::collections::HashMap::new();
+    if uids.is_empty() {
+        return Ok(out);
+    }
+    let set = uid_set(uids);
+    let fetches: Vec<Fetch> = tmo(async {
+        let stream = session.uid_fetch(&set, "(UID X-GM-LABELS)").await?;
+        stream.try_collect::<Vec<_>>().await
+    })
+    .await?;
+    for f in &fetches {
+        if let (Some(uid), Some(labels)) = (f.uid, f.gmail_labels()) {
+            out.insert(uid, labels.iter().map(|l| l.to_string()).collect());
+        }
+    }
+    Ok(out)
+}
+
+/// Gmail system labels meaning "already notified elsewhere / not incoming mail".
+pub fn gmail_label_excluded(label: &str) -> bool {
+    [
+        "\\Inbox", "\\Sent", "\\Draft", "\\Drafts", "\\Spam", "\\Trash", "\\Chat",
+    ]
+    .iter()
+    .any(|l| l.eq_ignore_ascii_case(label))
+}
+
 /// Gmail: which of `uids` belong to the Primary category.
 pub async fn gmail_primary(session: &mut Session, uids: &[u32]) -> Result<HashSet<u32>> {
     if uids.is_empty() {

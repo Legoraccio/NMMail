@@ -49,20 +49,41 @@ impl Backoff {
 enum Exit {
     /// Reconnect right away (resume from sleep).
     Reconnect,
+    /// The watched folder no longer exists or is no longer monitored.
+    Stop,
 }
 
-/// Keeps one connection in IDLE on INBOX and processes pushes.
-pub(super) async fn watcher(inner: Arc<Inner>, account_id: AccountId, wake: Arc<Notify>) {
+/// What a watcher keeps in IDLE.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(super) enum Target {
+    /// The INBOX: always watched; its watcher also reports the account state.
+    Inbox,
+    /// A folder the user asked to monitor (mail moved there by rules/filters).
+    Folder(FolderId),
+}
+
+/// Keeps one connection in IDLE on a folder and processes pushes.
+pub(super) async fn watcher(
+    inner: Arc<Inner>,
+    account_id: AccountId,
+    target: Target,
+    wake: Arc<Notify>,
+) {
     let mut backoff = Backoff(0);
     let mut reconnect_rx = inner.reconnect.subscribe();
     let mut health_rx = inner.health.subscribe();
     reconnect_rx.borrow_and_update();
     health_rx.borrow_and_update();
+    // Only the INBOX watcher speaks for the account's connection state.
+    let reports = target == Target::Inbox;
     loop {
-        inner.set_status(account_id, AccountState::Connecting, None);
+        if reports {
+            inner.set_status(account_id, AccountState::Connecting, None);
+        }
         let res = watch_once(
             &inner,
             account_id,
+            target,
             &wake,
             &mut backoff,
             &mut reconnect_rx,
@@ -74,14 +95,20 @@ pub(super) async fn watcher(inner: Arc<Inner>, account_id: AccountId, wake: Arc<
                 backoff.reset();
                 continue;
             }
+            Ok(Exit::Stop) => {
+                debug!(account_id, ?target, "watcher stopped");
+                return;
+            }
             Err(e) => {
                 let code = code_of(&e);
                 let msg = format!("{e:#}");
                 match code {
                     ErrorCode::AuthRequired => {
-                        warn!(account_id, "authentication required: {msg}");
+                        warn!(account_id, ?target, "authentication required: {msg}");
                         inner.auth.invalidate(account_id);
-                        inner.set_status(account_id, AccountState::AuthRequired, Some(msg));
+                        if reports {
+                            inner.set_status(account_id, AccountState::AuthRequired, Some(msg));
+                        }
                         Duration::from_secs(15 * 60)
                     }
                     ErrorCode::NotFound if inner.store.account(account_id).is_err() => {
@@ -89,13 +116,17 @@ pub(super) async fn watcher(inner: Arc<Inner>, account_id: AccountId, wake: Arc<
                         return;
                     }
                     ErrorCode::Offline => {
-                        debug!(account_id, "offline: {msg}");
-                        inner.set_status(account_id, AccountState::Offline, Some(msg));
+                        debug!(account_id, ?target, "offline: {msg}");
+                        if reports {
+                            inner.set_status(account_id, AccountState::Offline, Some(msg));
+                        }
                         backoff.next()
                     }
                     _ => {
-                        warn!(account_id, "watcher error: {msg}");
-                        inner.set_status(account_id, AccountState::Error, Some(msg));
+                        warn!(account_id, ?target, "watcher error: {msg}");
+                        if reports {
+                            inner.set_status(account_id, AccountState::Error, Some(msg));
+                        }
                         backoff.next()
                     }
                 }
@@ -110,27 +141,56 @@ pub(super) async fn watcher(inner: Arc<Inner>, account_id: AccountId, wake: Arc<
     }
 }
 
+/// Resolves the watched folder for this round (`None` = stop watching).
+fn resolve_target(
+    inner: &Inner,
+    account_id: AccountId,
+    target: Target,
+) -> Result<Option<crate::store::FolderState>> {
+    match target {
+        // Re-resolved every round: the folder list refresh may have recreated it.
+        Target::Inbox => Ok(Some(inner.store.ensure_folder(
+            account_id,
+            "INBOX",
+            Some(FolderRole::Inbox),
+        )?)),
+        Target::Folder(id) => match inner.store.folder_state(id) {
+            Ok(f) if f.monitored => Ok(Some(f)),
+            Ok(_) => Ok(None),
+            Err(e) if code_of(&e) == ErrorCode::NotFound => Ok(None),
+            Err(e) => Err(e),
+        },
+    }
+}
+
 async fn watch_once(
     inner: &Arc<Inner>,
     account_id: AccountId,
+    target: Target,
     wake: &Notify,
     backoff: &mut Backoff,
     reconnect_rx: &mut tokio::sync::watch::Receiver<u64>,
     health_rx: &mut tokio::sync::watch::Receiver<u64>,
 ) -> Result<Exit> {
+    if resolve_target(inner, account_id, target)?.is_none() {
+        return Ok(Exit::Stop);
+    }
     let account = inner.store.account(account_id)?;
     let creds = inner.auth.credentials(&account).await?;
     let (mut session, caps) = conn::connect(&account.imap, &creds).await?;
     info!(
         account_id,
+        ?target,
         idle = caps.idle,
         gmail = caps.gmail,
         condstore = caps.condstore,
         "watcher connected"
     );
     backoff.reset();
-    // Folder list + flags of other folders are the worker's job.
-    inner.job(account_id, Job::RefreshFolders, None);
+    if target == Target::Inbox {
+        // Folder list + flags of other folders are the worker's job.
+        inner.job(account_id, Job::RefreshFolders, None);
+    }
 
     let mut mode = SyncMode::Full;
     let mut last_full = Instant::now();
@@ -142,26 +202,28 @@ async fn watch_once(
             last_full = Instant::now();
         }
         let cache_days = inner.settings.read().unwrap().cache_days;
-        // Re-resolved every round: the folder list refresh may have recreated it.
-        let folder = inner
-            .store
-            .ensure_folder(account_id, "INBOX", Some(FolderRole::Inbox))?;
-        let inbox = folder.clone();
+        let Some(folder) = resolve_target(inner, account_id, target)? else {
+            let _ = tmo_for(Duration::from_secs(5), session.logout()).await;
+            return Ok(Exit::Stop);
+        };
         let out =
             sync::sync_folder(&mut session, &inner.store, &folder, caps, cache_days, mode).await?;
-        inner.set_status(account_id, AccountState::Online, None);
+        if target == Target::Inbox {
+            inner.set_status(account_id, AccountState::Online, None);
+        }
         if out.changed {
             let _ = inner.events.send(Event::MessagesChanged {
                 account_id,
-                folder_ids: vec![inbox.id],
+                folder_ids: vec![folder.id],
             });
         }
         if out.initial {
+            // First sync of the folder: cache it, never notify.
             inner.job(
                 account_id,
                 Job::Prefetch {
-                    folder_id: inbox.id,
-                    limit: 60,
+                    folder_id: folder.id,
+                    limit: if target == Target::Inbox { 60 } else { 20 },
                 },
                 None,
             );
@@ -169,6 +231,7 @@ async fn watch_once(
             on_new_mail(
                 inner,
                 &account,
+                &folder,
                 &mut session,
                 caps,
                 &out.new_ids,
@@ -176,7 +239,9 @@ async fn watch_once(
             )
             .await;
         }
-        inner.refresh_unread();
+        if target == Target::Inbox {
+            inner.refresh_unread();
+        }
 
         // Changes that arrived while we were busy.
         let pending = sync::drain_unsolicited(&mut session);
@@ -259,12 +324,14 @@ fn mode_for(c: Changes) -> SyncMode {
 async fn on_new_mail(
     inner: &Arc<Inner>,
     account: &AccountConfig,
+    folder: &crate::store::FolderState,
     session: &mut Session,
     caps: Caps,
     ids: &[MessageId],
     uids: &[u32],
 ) {
-    info!(account_id = account.id, count = ids.len(), "new mail");
+    let in_inbox = folder.role == Some(FolderRole::Inbox);
+    info!(account_id = account.id, folder = %folder.name, count = ids.len(), "new mail");
     // Preferences may have changed since the watcher connected.
     let fresh = inner.store.account(account.id).ok();
     let account = fresh.as_ref().unwrap_or(account);
@@ -290,18 +357,13 @@ async fn on_new_mail(
             Err(e) => debug!("prefetch failed: {e:#}"),
         }
     }
-    let allowed: Option<HashSet<MessageId>> =
+    let uid_of = |id: &MessageId| inner.store.message_row(*id).map(|r| r.uid).ok();
+    let allowed: Option<HashSet<MessageId>> = if in_inbox {
         if account.notify_filter == NotifyFilter::Primary && caps.gmail {
             match sync::gmail_primary(session, uids).await {
                 Ok(primary) => Some(
                     ids.iter()
-                        .filter(|id| {
-                            inner
-                                .store
-                                .message_row(**id)
-                                .map(|r| primary.contains(&r.uid))
-                                .unwrap_or(true)
-                        })
+                        .filter(|id| uid_of(id).is_none_or(|u| primary.contains(&u)))
                         .copied()
                         .collect(),
                 ),
@@ -309,8 +371,31 @@ async fn on_new_mail(
             }
         } else {
             None
-        };
-    inner.notify_new(account, ids, allowed.as_ref());
+        }
+    } else if caps.gmail {
+        // Gmail exposes labels as folders: a message also labelled \Inbox was
+        // already notified by the INBOX watcher; sent mail and drafts are not news.
+        match sync::gmail_labels(session, uids).await {
+            Ok(labels) => Some(
+                ids.iter()
+                    .filter(|id| {
+                        uid_of(id)
+                            .and_then(|u| labels.get(&u))
+                            .is_none_or(|ls| !ls.iter().any(|l| sync::gmail_label_excluded(l)))
+                    })
+                    .copied()
+                    .collect(),
+            ),
+            Err(e) => {
+                debug!("X-GM-LABELS failed: {e:#}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let folder_label = (!in_inbox).then(|| folder.display_name.clone());
+    inner.notify_new(account, ids, allowed.as_ref(), folder_label.as_deref());
 }
 
 fn store_body(inner: &Inner, id: MessageId, raw: &[u8]) {

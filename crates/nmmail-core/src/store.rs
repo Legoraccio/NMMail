@@ -14,7 +14,10 @@ use crate::error::not_found;
 use crate::model::*;
 use crate::settings::Settings;
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
+
+/// Most folders (besides INBOX) one account can watch with a dedicated IDLE connection.
+pub const MAX_MONITORED_FOLDERS: usize = 5;
 
 const SCHEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -48,6 +51,7 @@ CREATE TABLE IF NOT EXISTS folders(
   highest_modseq INTEGER,
   oldest_date INTEGER,
   last_sync INTEGER,
+  monitored INTEGER NOT NULL DEFAULT 0,
   UNIQUE(account_id, name)
 );
 CREATE TABLE IF NOT EXISTS messages(
@@ -140,7 +144,10 @@ pub struct FolderState {
     pub id: FolderId,
     pub account_id: AccountId,
     pub name: String,
+    pub display_name: String,
     pub role: Option<FolderRole>,
+    /// Watched with its own IDLE connection (new mail is notified).
+    pub monitored: bool,
     pub uidvalidity: Option<u32>,
     pub uidnext: Option<u32>,
     pub highest_uid: u32,
@@ -226,13 +233,29 @@ impl Store {
              PRAGMA busy_timeout=5000;",
         )?;
         conn.execute_batch(SCHEMA)?;
+        Self::migrate(&conn)?;
         conn.execute(
-            "INSERT OR IGNORE INTO meta(key, value) VALUES('schema_version', ?1)",
+            "INSERT INTO meta(key, value) VALUES('schema_version', ?1)
+             ON CONFLICT(key) DO UPDATE SET value=excluded.value",
             [SCHEMA_VERSION.to_string()],
         )?;
         Ok(Store {
             conn: Arc::new(Mutex::new(conn)),
         })
+    }
+
+    /// Brings databases created by older versions up to date (idempotent).
+    fn migrate(conn: &Connection) -> Result<()> {
+        // v2: per-folder "monitored" flag.
+        let has_monitored = conn
+            .prepare("SELECT 1 FROM pragma_table_info('folders') WHERE name='monitored'")?
+            .exists([])?;
+        if !has_monitored {
+            conn.execute_batch(
+                "ALTER TABLE folders ADD COLUMN monitored INTEGER NOT NULL DEFAULT 0;",
+            )?;
+        }
+        Ok(())
     }
 
     fn db(&self) -> MutexGuard<'_, Connection> {
@@ -473,7 +496,8 @@ impl Store {
         let db = self.db();
         let mut st = db.prepare(
             "SELECT f.id, f.account_id, f.name, f.display_name, f.role, f.parent_id, f.depth, f.selectable,
-                    COALESCE(c.unread, 0), COALESCE(c.total, 0)
+                    COALESCE(c.unread, 0), COALESCE(c.total, 0),
+                    (f.monitored <> 0 OR f.role = 'inbox')
              FROM folders f
              LEFT JOIN (SELECT folder_id, SUM((flags & 1) = 0) AS unread, COUNT(*) AS total
                         FROM messages GROUP BY folder_id) c ON c.folder_id = f.id
@@ -493,11 +517,35 @@ impl Store {
                 selectable: r.get(7)?,
                 unread: r.get(8)?,
                 total: r.get(9)?,
+                monitored: r.get::<_, Option<bool>>(10)?.unwrap_or(false),
             })
         })?;
         let mut out = rows.collect::<rusqlite::Result<Vec<_>>>()?;
         sort_folders(&mut out);
         Ok(out)
+    }
+
+    /// Turns instant notifications for a folder on or off.
+    pub fn set_folder_monitored(&self, id: FolderId, monitored: bool) -> Result<()> {
+        let n = self.db().execute(
+            "UPDATE folders SET monitored=?1 WHERE id=?2",
+            params![monitored, id],
+        )?;
+        if n == 0 {
+            return Err(not_found(format!("folder {id}")));
+        }
+        Ok(())
+    }
+
+    /// Folders (other than INBOX) watched for new mail.
+    pub fn monitored_folders(&self, account_id: AccountId) -> Result<Vec<FolderState>> {
+        let db = self.db();
+        let mut st = db.prepare(
+            "SELECT * FROM folders WHERE account_id=?1 AND monitored<>0
+               AND (role IS NULL OR role<>'inbox') AND selectable<>0 ORDER BY id",
+        )?;
+        let rows = st.query_map([account_id], folder_state_from_row)?;
+        Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
     }
 
     pub fn folder_state(&self, id: FolderId) -> Result<FolderState> {
@@ -1145,9 +1193,11 @@ fn folder_state_from_row(r: &Row<'_>) -> rusqlite::Result<FolderState> {
         id: r.get("id")?,
         account_id: r.get("account_id")?,
         name: r.get("name")?,
+        display_name: r.get("display_name")?,
         role: r
             .get::<_, Option<String>>("role")?
             .and_then(|s| FolderRole::parse(&s)),
+        monitored: r.get("monitored")?,
         uidvalidity: r.get("uidvalidity")?,
         uidnext: r.get("uidnext")?,
         highest_uid: r.get("highest_uid")?,
@@ -1371,6 +1421,56 @@ mod tests {
 
         s.delete_account(a.id).unwrap();
         assert!(s.folders(None).unwrap().is_empty());
+    }
+
+    #[test]
+    fn migrates_v1_database_and_tracks_monitored_folders() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("old.db");
+        {
+            // A database as created by schema v1 (no `monitored` column).
+            let v1 = SCHEMA.replace("  monitored INTEGER NOT NULL DEFAULT 0,\n", "");
+            assert_ne!(v1, SCHEMA);
+            let conn = Connection::open(&path).unwrap();
+            conn.execute_batch(&v1).unwrap();
+            conn.execute(
+                "INSERT INTO accounts(provider, email, display_name, username, auth, imap_host, imap_port,
+                    imap_security, smtp_host, smtp_port, smtp_security, created_at)
+                 VALUES('imap','a@b.c','A','a@b.c','password','h',1,'none','h',1,'none',0)",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO folders(account_id, name, display_name, role) VALUES(1,'INBOX','Posta in arrivo','inbox')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO folders(account_id, name, display_name) VALUES(1,'Lavoro','Lavoro')",
+                [],
+            )
+            .unwrap();
+        }
+        let s = Store::open(&path).unwrap();
+        let folders = s.folders(Some(1)).unwrap();
+        let inbox = folders.iter().find(|f| f.name == "INBOX").unwrap();
+        let work = folders.iter().find(|f| f.name == "Lavoro").unwrap();
+        assert!(inbox.monitored, "INBOX is always watched");
+        assert!(!work.monitored);
+        s.set_folder_monitored(work.id, true).unwrap();
+        let monitored = s.monitored_folders(1).unwrap();
+        assert_eq!(monitored.len(), 1);
+        assert_eq!(monitored[0].display_name, "Lavoro");
+        assert!(
+            s.folders(Some(1))
+                .unwrap()
+                .iter()
+                .any(|f| f.name == "Lavoro" && f.monitored)
+        );
+        assert!(s.set_folder_monitored(999, true).is_err());
+        // Re-opening an up-to-date database is a no-op.
+        drop(s);
+        Store::open(&path).unwrap();
     }
 
     #[test]

@@ -21,6 +21,8 @@ background di pochi MB.
 - Rispondi, rispondi a tutti, inoltra (con allegati), editor ricco, completamento indirizzi,
   invio anche offline (coda automatica), gestore dei link `mailto:`.
 - Archivia, elimina, sposta, letto/non letto, contrassegna, selezione multipla, scorciatoie.
+- Notifiche istantanee anche per le cartelle in cui regole di Outlook o filtri di Gmail spostano
+  la posta (tasto destro sulla cartella → "Notifica subito le nuove mail in questa cartella").
 - Tema chiaro/scuro di sistema con Mica, interfaccia in italiano e inglese.
 
 | Composizione | Impostazioni | Tema chiaro |

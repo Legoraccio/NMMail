@@ -166,6 +166,7 @@ pub fn test_notification_cli() -> String {
         sound: false,
         show_preview: true,
         language: "system".into(),
+        folder: None,
     };
     toast::show(&n, system_lang());
     std::thread::sleep(Duration::from_millis(800));

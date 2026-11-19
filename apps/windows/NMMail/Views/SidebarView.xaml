@@ -55,7 +55,17 @@
         </DataTemplate>
 
         <DataTemplate x:Key="FolderTemplate" x:DataType="vm:SidebarItem">
-            <Grid Height="32">
+            <Grid Height="32" Background="Transparent">
+                <Grid.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem Text="{x:Bind MonitorMenuText, Mode=OneWay}" Tag="{x:Bind}"
+                                        IsEnabled="{x:Bind CanToggleMonitoring, Mode=OneWay}" Click="ToggleMonitoring_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon Glyph="&#xEA8F;" />
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Grid.ContextFlyout>
                 <Border CornerRadius="4" Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                         Visibility="{x:Bind IsSelected, Mode=OneWay}" />
                 <Rectangle Width="3" Height="16" RadiusX="1.5" RadiusY="1.5" HorizontalAlignment="Left"
@@ -66,6 +76,7 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Button Width="18" Height="24" Padding="0" Background="Transparent" BorderThickness="0" IsTabStop="False"
                             Visibility="{x:Bind ChevronVisibility, Mode=OneWay}" Tag="{x:Bind}" Click="Chevron_Click">
@@ -74,7 +85,11 @@
                     <FontIcon Grid.Column="1" Glyph="{x:Bind Glyph}" FontSize="15" Margin="2,0,10,0" />
                     <TextBlock Grid.Column="2" Text="{x:Bind Title, Mode=OneWay}" FontWeight="{x:Bind TitleWeight, Mode=OneWay}"
                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1" />
-                    <TextBlock Grid.Column="3" Text="{x:Bind UnreadText, Mode=OneWay}" Margin="8,0,0,0" VerticalAlignment="Center"
+                    <FontIcon x:Uid="Sidebar_MonitoredBell" Grid.Column="3" Glyph="&#xEA8F;" FontSize="11" Margin="6,0,0,0"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                              Visibility="{x:Bind ShowMonitoredBell, Mode=OneWay}"
+                              ToolTipService.ToolTip="Notifiche istantanee attive per questa cartella" />
+                    <TextBlock Grid.Column="4" Text="{x:Bind UnreadText, Mode=OneWay}" Margin="8,0,0,0" VerticalAlignment="Center"
                                FontWeight="SemiBold" Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                 </Grid>

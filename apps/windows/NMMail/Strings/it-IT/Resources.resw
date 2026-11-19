@@ -120,6 +120,12 @@
   <data name="Sidebar_NewMail.Text" xml:space="preserve"><value>Nuovo messaggio</value></data>
   <data name="Sidebar_Settings.Text" xml:space="preserve"><value>Impostazioni</value></data>
   <data name="Sidebar_Reauth.Content" xml:space="preserve"><value>Accedi di nuovo</value></data>
+  <data name="Sidebar_NotifyFolder" xml:space="preserve"><value>Notifica subito le nuove mail in questa cartella</value></data>
+  <data name="Sidebar_StopNotifyFolder" xml:space="preserve"><value>Non notificare più le mail di questa cartella</value></data>
+  <data name="Sidebar_MonitoredBell.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Notifiche istantanee attive per questa cartella</value></data>
+  <data name="Notice_FolderMonitored" xml:space="preserve"><value>Notifiche istantanee attivate</value></data>
+  <data name="Notice_FolderUnmonitored" xml:space="preserve"><value>Notifiche disattivate</value></data>
+  <data name="Error_MonitoredLimit" xml:space="preserve"><value>Puoi attivare le notifiche istantanee al massimo per 5 cartelle per account (oltre alla Posta in arrivo).</value></data>
 
   <data name="List_ClearSearch.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Chiudi la ricerca (Esc)</value></data>
   <data name="List_ClearSearch.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Chiudi la ricerca</value></data>

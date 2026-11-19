@@ -50,6 +50,14 @@ fn audio(sound: bool) -> &'static str {
     }
 }
 
+/// "account · folder" when the mail was moved out of the INBOX by a rule/filter.
+fn attribution(n: &Notification) -> String {
+    match n.folder.as_deref() {
+        Some(f) if !f.trim().is_empty() => format!("{} · {}", n.account_email, clip(f, 40)),
+        _ => n.account_email.clone(),
+    }
+}
+
 /// Toast XML for one message.
 pub fn message_xml(n: &Notification, item: &nmmail_core::NotifyItem, lang: Lang) -> String {
     let id = item.message_id;
@@ -86,7 +94,7 @@ pub fn message_xml(n: &Notification, item: &nmmail_core::NotifyItem, lang: Lang)
 <action content=\"{arch}\" activationType=\"protocol\" arguments=\"nmmail://archive?msg={id}\"/>\
 <action content=\"{del}\" activationType=\"protocol\" arguments=\"nmmail://delete?msg={id}\"/>\
 </actions>{audio}</toast>",
-        acct = esc(&n.account_email),
+        acct = esc(&attribution(n)),
         read = esc(t(lang, S::MarkRead)),
         arch = esc(t(lang, S::Archive)),
         del = esc(t(lang, S::Delete)),
@@ -110,7 +118,7 @@ pub fn summary_xml(n: &Notification, lang: Lang) -> String {
     format!(
         "<toast launch=\"nmmail://open\" activationType=\"protocol\">\
 <visual><binding template=\"ToastGeneric\">{texts}<text placement=\"attribution\">{acct}</text></binding></visual>{audio}</toast>",
-        acct = esc(&n.account_email),
+        acct = esc(&attribution(n)),
         audio = audio(n.sound),
     )
 }
@@ -200,10 +208,15 @@ mod tests {
             sound: true,
             show_preview: true,
             language: "it".into(),
+            folder: Some("Lavoro".into()),
         };
         let xml = message_xml(&n, &n.items[0], Lang::It);
         assert!(xml.contains("Tom &amp; &quot;Jerry&quot; &lt;tj&gt;"));
         assert!(xml.contains("nmmail://markread?msg=42"));
+        assert!(
+            xml.contains("me@x.it · Lavoro"),
+            "folder shown in the attribution"
+        );
         let doc = XmlDocument::new().unwrap();
         doc.LoadXml(&HSTRING::from(xml)).unwrap();
         let doc = XmlDocument::new().unwrap();

@@ -29,7 +29,7 @@ use crate::mime;
 use crate::model::*;
 use crate::settings::Settings;
 use crate::store::{ListScope, NewAccount, Store};
-use account::{Job, JobOutput, WorkerMsg};
+use account::{Job, JobOutput, Target, WorkerMsg};
 pub use platform::{Notification, NotifyItem, Platform};
 
 const BODY_TIMEOUT: Duration = Duration::from_secs(90);
@@ -44,12 +44,24 @@ struct Status {
     last_sync: Option<i64>,
 }
 
+/// One IDLE watcher (INBOX or a monitored folder).
+struct WatcherHandle {
+    wake: Arc<Notify>,
+    /// `None` while it is being spawned.
+    task: Option<JoinHandle<()>>,
+}
+
 struct AccountRuntime {
     status: Status,
     worker: mpsc::UnboundedSender<WorkerMsg>,
-    wake: Arc<Notify>,
-    tasks: Vec<JoinHandle<()>>,
+    worker_task: Option<JoinHandle<()>>,
+    watchers: HashMap<Target, WatcherHandle>,
 }
+
+/// Message-IDs notified recently, to avoid notifying the same mail twice (copies
+/// in several watched folders, Gmail labels, moves between watched folders).
+const RECENT_NOTIFIED_TTL_MS: i64 = 24 * 3_600_000;
+const RECENT_NOTIFIED_MAX: usize = 500;
 
 pub(crate) struct Inner {
     store: Store,
@@ -72,6 +84,8 @@ pub(crate) struct Inner {
     shutdown: Notify,
     /// When each non-INBOX folder last had its whole cache window reconciled.
     full_sync: Mutex<HashMap<FolderId, Instant>>,
+    /// (time, account, Message-ID) of recent notifications.
+    recent_notified: Mutex<std::collections::VecDeque<(i64, AccountId, String)>>,
 }
 
 /// Cheap, cloneable handle to the engine.
@@ -142,6 +156,7 @@ impl Engine {
             last_unread: Mutex::new(None),
             shutdown: Notify::new(),
             full_sync: Mutex::new(HashMap::new()),
+            recent_notified: Mutex::new(std::collections::VecDeque::new()),
         });
         let engine = Engine { inner };
         for a in engine.inner.store.accounts()? {
@@ -439,13 +454,60 @@ impl Engine {
     pub fn sync_folder(&self, folder_id: FolderId) -> Result<()> {
         let f = self.inner.store.folder_state(folder_id)?;
         if f.role == Some(FolderRole::Inbox) {
-            // INBOX belongs to the watcher (it decides about notifications).
+            // Watched folders belong to their watcher (it decides about notifications).
             self.inner.wake(f.account_id);
+        } else if f.monitored {
+            self.inner
+                .wake_target(f.account_id, Target::Folder(folder_id));
         } else {
             self.inner
                 .job(f.account_id, Job::SyncFolder(folder_id), None);
         }
         Ok(())
+    }
+
+    /// Turns instant push + notifications for a folder on or off.
+    pub fn set_folder_monitored(&self, folder_id: FolderId, monitored: bool) -> Result<Folder> {
+        let f = self.inner.store.folder_state(folder_id)?;
+        let view = |s: &Store| -> Result<Folder> {
+            s.folders(Some(f.account_id))?
+                .into_iter()
+                .find(|x| x.id == folder_id)
+                .ok_or_else(|| not_found(format!("folder {folder_id}")))
+        };
+        if f.role == Some(FolderRole::Inbox) {
+            // Always watched.
+            return view(&self.inner.store);
+        }
+        if monitored && !f.monitored {
+            let current = view(&self.inner.store)?;
+            if !current.selectable {
+                return Err(bad_request("this folder cannot contain messages"));
+            }
+            let count = self.inner.store.monitored_folders(f.account_id)?.len();
+            if count >= crate::store::MAX_MONITORED_FOLDERS {
+                return Err(bad_request(format!(
+                    "at most {} monitored folders per account",
+                    crate::store::MAX_MONITORED_FOLDERS
+                )));
+            }
+        }
+        if monitored != f.monitored {
+            self.inner
+                .store
+                .set_folder_monitored(folder_id, monitored)?;
+            if monitored {
+                self.inner
+                    .spawn_watcher(f.account_id, Target::Folder(folder_id));
+            } else {
+                self.inner
+                    .stop_watcher(f.account_id, Target::Folder(folder_id));
+            }
+            let _ = self.inner.events.send(Event::FoldersChanged {
+                account_id: f.account_id,
+            });
+        }
+        view(&self.inner.store)
     }
 
     pub fn sync_now(&self, account_id: Option<AccountId>) {
@@ -461,7 +523,7 @@ impl Engine {
                 .collect(),
         };
         for id in ids {
-            self.inner.wake(id);
+            self.inner.wake_all(id);
             self.inner.job(id, Job::RefreshFolders, None);
         }
         self.inner.outbox_kick.notify_one();
@@ -856,7 +918,7 @@ impl Engine {
                 .copied()
                 .collect();
             for id in ids {
-                self.inner.wake(id);
+                self.inner.wake_all(id);
             }
         }
         let _ = self.inner.events.send(Event::SettingsChanged(new.clone()));
@@ -896,6 +958,7 @@ impl Engine {
             sound: s.notification_sound,
             show_preview: true,
             language: s.language.clone(),
+            folder: None,
         });
         self.inner.platform.notification_status()
     }
@@ -938,9 +1001,8 @@ impl Inner {
 
     fn start_account(self: &Arc<Self>, id: AccountId) {
         let (tx, rx) = mpsc::unbounded_channel();
-        let wake = Arc::new(Notify::new());
         // Register the runtime *before* spawning: on a multi-threaded runtime the
-        // watcher may report its status (or queue jobs) before this function returns.
+        // watchers may report their status (or queue jobs) before this returns.
         self.accounts.lock().unwrap().insert(
             id,
             AccountRuntime {
@@ -950,29 +1012,82 @@ impl Inner {
                     last_sync: None,
                 },
                 worker: tx,
-                wake: wake.clone(),
-                tasks: Vec::new(),
+                worker_task: None,
+                watchers: HashMap::new(),
             },
         );
-        let (me, w) = (self.clone(), wake);
-        let watcher = tokio::spawn(supervised("watcher", move || {
-            account::watcher(me.clone(), id, w.clone())
-        }));
         let worker = tokio::spawn(account::worker(self.clone(), id, rx));
         match self.accounts.lock().unwrap().get_mut(&id) {
-            Some(rt) => rt.tasks = vec![watcher, worker],
+            Some(rt) => rt.worker_task = Some(worker),
             None => {
                 // Removed meanwhile.
-                watcher.abort();
                 worker.abort();
+                return;
             }
+        }
+        self.spawn_watcher(id, Target::Inbox);
+        for f in self.store.monitored_folders(id).unwrap_or_default() {
+            self.spawn_watcher(id, Target::Folder(f.id));
+        }
+    }
+
+    /// Starts an IDLE watcher unless one is already running for that target.
+    fn spawn_watcher(self: &Arc<Self>, account_id: AccountId, target: Target) {
+        let wake = Arc::new(Notify::new());
+        {
+            let mut map = self.accounts.lock().unwrap();
+            let Some(rt) = map.get_mut(&account_id) else {
+                return;
+            };
+            if let Some(existing) = rt.watchers.get(&target)
+                && existing.task.as_ref().is_none_or(|t| !t.is_finished())
+            {
+                return;
+            }
+            rt.watchers.insert(
+                target,
+                WatcherHandle {
+                    wake: wake.clone(),
+                    task: None,
+                },
+            );
+        }
+        let (me, w) = (self.clone(), wake.clone());
+        let task = tokio::spawn(supervised("watcher", move || {
+            account::watcher(me.clone(), account_id, target, w.clone())
+        }));
+        let mut map = self.accounts.lock().unwrap();
+        match map
+            .get_mut(&account_id)
+            .and_then(|rt| rt.watchers.get_mut(&target))
+        {
+            Some(h) if h.task.is_none() && Arc::ptr_eq(&h.wake, &wake) => h.task = Some(task),
+            // Stopped (or replaced) meanwhile.
+            _ => task.abort(),
+        }
+    }
+
+    fn stop_watcher(&self, account_id: AccountId, target: Target) {
+        let handle = self
+            .accounts
+            .lock()
+            .unwrap()
+            .get_mut(&account_id)
+            .and_then(|rt| rt.watchers.remove(&target));
+        if let Some(t) = handle.and_then(|h| h.task) {
+            t.abort();
         }
     }
 
     fn stop_account(&self, id: AccountId) {
         if let Some(rt) = self.accounts.lock().unwrap().remove(&id) {
-            for t in rt.tasks {
+            if let Some(t) = rt.worker_task {
                 t.abort();
+            }
+            for h in rt.watchers.into_values() {
+                if let Some(t) = h.task {
+                    t.abort();
+                }
             }
         }
     }
@@ -982,9 +1097,30 @@ impl Inner {
         self.start_account(id);
     }
 
+    /// Wakes one watcher (e.g. the user opened that folder).
+    fn wake_target(&self, id: AccountId, target: Target) {
+        if let Some(h) = self
+            .accounts
+            .lock()
+            .unwrap()
+            .get(&id)
+            .and_then(|rt| rt.watchers.get(&target))
+        {
+            h.wake.notify_one();
+        }
+    }
+
+    /// Wakes the INBOX watcher of an account.
     fn wake(&self, id: AccountId) {
+        self.wake_target(id, Target::Inbox);
+    }
+
+    /// Wakes every watcher of an account ("check mail now", new credentials).
+    fn wake_all(&self, id: AccountId) {
         if let Some(rt) = self.accounts.lock().unwrap().get(&id) {
-            rt.wake.notify_one();
+            for h in rt.watchers.values() {
+                h.wake.notify_one();
+            }
         }
     }
 
@@ -1103,12 +1239,40 @@ impl Inner {
         account: &AccountConfig,
         candidates: &[MessageId],
         allowed: Option<&HashSet<MessageId>>,
+        folder: Option<&str>,
     ) {
-        self.show_notification(account, candidates, allowed);
+        self.show_notification(account, candidates, allowed, folder);
         let _ = self.events.send(Event::MailNew {
             account_id: account.id,
             message_ids: candidates.to_vec(),
         });
+    }
+
+    /// Records a notified Message-ID; returns false if it was notified recently.
+    fn first_notification(&self, account_id: AccountId, message_id: Option<&str>) -> bool {
+        let Some(mid) = message_id
+            .map(|m| m.trim_matches(['<', '>']))
+            .filter(|m| !m.is_empty())
+        else {
+            return true;
+        };
+        let now = now_ms();
+        let mut recent = self.recent_notified.lock().unwrap();
+        while recent
+            .front()
+            .is_some_and(|(t, _, _)| now - *t > RECENT_NOTIFIED_TTL_MS)
+            || recent.len() > RECENT_NOTIFIED_MAX
+        {
+            recent.pop_front();
+        }
+        if recent
+            .iter()
+            .any(|(_, a, m)| *a == account_id && m.eq_ignore_ascii_case(mid))
+        {
+            return false;
+        }
+        recent.push_back((now, account_id, mid.to_string()));
+        true
     }
 
     /// Applies the notification policy and shows a toast if appropriate.
@@ -1117,6 +1281,7 @@ impl Inner {
         account: &AccountConfig,
         candidates: &[MessageId],
         allowed: Option<&HashSet<MessageId>>,
+        folder: Option<&str>,
     ) {
         let settings = self.settings.read().unwrap().clone();
         if !settings.notifications_enabled || !account.notify || settings.is_quiet(now_ms()) {
@@ -1136,6 +1301,15 @@ impl Inner {
                     .is_some_and(|f| f.address.eq_ignore_ascii_case(&account.email))
             })
             .filter(|s| allowed.is_none_or(|a| a.contains(&s.id)))
+            .filter(|s| match self.store.message_row(s.id) {
+                // Drafts (e.g. in Gmail's "All Mail") are not incoming mail; the same
+                // mail seen in several watched folders is notified once.
+                Ok(row) => {
+                    row.flags & flags::DRAFT == 0
+                        && self.first_notification(account.id, row.message_id.as_deref())
+                }
+                Err(_) => true,
+            })
             .collect();
         if items.is_empty() {
             return;
@@ -1176,6 +1350,7 @@ impl Inner {
             sound: settings.notification_sound,
             show_preview: settings.show_preview,
             language: settings.language.clone(),
+            folder: folder.map(|f| f.to_string()),
         });
     }
 

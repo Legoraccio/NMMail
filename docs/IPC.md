@@ -59,7 +59,8 @@ type FolderRole = "inbox" | "sent" | "drafts" | "trash" | "archive" | "spam"
 type Folder = {
   id: number, accountId: number, name: string, displayName: string,
   role: FolderRole, parentId: number | null, depth: number,
-  unread: number, total: number, selectable: boolean
+  unread: number, total: number, selectable: boolean,
+  monitored: boolean   // nuove mail notificate all'istante (sempre true per INBOX)
 }
 
 type MessageSummary = {
@@ -113,6 +114,7 @@ type Settings = {
 | `accounts.remove` | `{id}` | `{}` |
 | `folders.list` | `{accountId?}` | `{folders: Folder[]}` |
 | `folders.sync` | `{folderId}` | `{}` (poi evento `messages.changed`) |
+| `folders.setMonitored` | `{folderId, monitored}` | `{folder: Folder}` — push IDLE e notifiche anche per una cartella diversa da INBOX (mail spostate da regole/filtri del server). Una connessione IDLE dedicata per cartella, massimo 5 per account (`badRequest` oltre il limite); INBOX è sempre monitorata. Poi evento `folders.changed` |
 | `messages.list` | `{folderId?, unified?: "inbox", beforeDate?, beforeId?, limit?, unreadOnly?}` | `{messages: MessageSummary[], hasMore: boolean}` |
 | `messages.loadOlder` | `{folderId, beforeDate}` | `{messages: MessageSummary[], hasMore: boolean}` (dal server, oltre la cache) |
 | `messages.get` | `{id, allowRemote?: boolean}` | `{message: MessageDetail}` |
