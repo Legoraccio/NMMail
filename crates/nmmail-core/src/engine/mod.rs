@@ -70,6 +70,8 @@ pub(crate) struct Inner {
     started: Instant,
     last_unread: Mutex<Option<(u32, Option<String>)>>,
     shutdown: Notify,
+    /// When each non-INBOX folder last had its whole cache window reconciled.
+    full_sync: Mutex<HashMap<FolderId, Instant>>,
 }
 
 /// Cheap, cloneable handle to the engine.
@@ -139,6 +141,7 @@ impl Engine {
             started: Instant::now(),
             last_unread: Mutex::new(None),
             shutdown: Notify::new(),
+            full_sync: Mutex::new(HashMap::new()),
         });
         let engine = Engine { inner };
         for a in engine.inner.store.accounts()? {

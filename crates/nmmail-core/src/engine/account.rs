@@ -237,8 +237,9 @@ async fn watch_once(
         session = tmo_for(DONE_TIMEOUT, handle.done()).await?;
         changes.merge(sync::drain_unsolicited(&mut session));
         mode = match wakeup {
-            // User asked for a refresh ("sync now", INBOX opened): reconcile everything.
-            Wakeup::Manual => SyncMode::Full,
+            // User asked for a refresh ("sync now", INBOX opened): new mail plus the
+            // most recent flags (the whole window is reconciled every FULL_RESYNC).
+            Wakeup::Manual => SyncMode::Recent,
             // Server push, renewal timeout or network/health check.
             _ if changes.any() => mode_for(changes),
             _ => SyncMode::NewOnly,
@@ -545,6 +546,19 @@ async fn run_job_once(
         Job::SyncFolder(folder_id) => {
             let folder = inner.store.folder_state(*folder_id)?;
             let cache_days = inner.settings.read().unwrap().cache_days;
+            // Opening a folder reconciles recent messages; the whole cache window
+            // at most every FULL_RESYNC (keeps big folders cheap to revisit).
+            let full = inner
+                .full_sync
+                .lock()
+                .unwrap()
+                .get(folder_id)
+                .is_none_or(|t| t.elapsed() >= FULL_RESYNC);
+            let mode = if full {
+                SyncMode::Full
+            } else {
+                SyncMode::Recent
+            };
             let c = ensure_conn(inner, account_id, conn).await?;
             c.selected = Some(folder.name.clone());
             let out = sync::sync_folder(
@@ -553,9 +567,16 @@ async fn run_job_once(
                 &folder,
                 c.caps,
                 cache_days,
-                SyncMode::Full,
+                mode,
             )
             .await?;
+            if full {
+                inner
+                    .full_sync
+                    .lock()
+                    .unwrap()
+                    .insert(*folder_id, Instant::now());
+            }
             let _ = inner.events.send(Event::MessagesChanged {
                 account_id,
                 folder_ids: vec![*folder_id],
