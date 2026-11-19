@@ -135,9 +135,9 @@ fn icon_png() -> Option<String> {
 pub fn register(enable: bool) -> Result<()> {
     if enable {
         registry::register_integration(&exe_path().to_string_lossy(), icon_png().as_deref())?;
-        // Only an installed UI can handle mailto: links.
+        // Only an installed UI can handle mailto: links (and never a dev/test instance).
         let ui = exe_path().with_file_name("NMMail.exe");
-        if ui.exists() {
+        if ui.exists() && std::env::var_os("NMMAIL_DATA_DIR").is_none() {
             registry::register_mailto(&ui.to_string_lossy())?;
         }
         Ok(())

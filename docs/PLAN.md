@@ -232,6 +232,7 @@ Ogni fase si chiude con build verde, test, commit e push.
 | Click su notifica → azione eseguita | – | 24 ms |
 | Apertura messaggio in cache (IPC + render) | – | ~10 ms |
 | CPU demone in 1 ora con 2 account in IDLE | ~0% | **0,16 s** (0,0044%), 2 thread attivi |
+| Avvio demone → IPC pronto | – | **146 ms** a freddo, ~25 ms a caldo |
 | Avvio UI Native AOT (pronta all'input) | < 1 s | **114 ms** (primo frame ~300 ms, a freddo ~530 ms) |
 | RAM UI con finestra aperta | – | ~140 MB + processi WebView2 (0 a finestra chiusa) |
 
