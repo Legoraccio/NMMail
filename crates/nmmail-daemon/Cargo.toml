@@ -1,0 +1,23 @@
+[package]
+name = "nmmail-daemon"
+description = "NM Mail background daemon (nmmaild): push sync, notifications, tray"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "nmmaild"
+path = "src/main.rs"
+
+[dependencies]
+nmmail-core.workspace = true
+anyhow.workspace = true
+tokio = { workspace = true, features = ["rt", "net", "time", "sync", "macros", "io-util"] }
+futures.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tracing-appender.workspace = true

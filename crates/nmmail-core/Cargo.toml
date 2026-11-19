@@ -1,0 +1,42 @@
+[package]
+name = "nmmail-core"
+description = "NM Mail cross-platform engine: storage, IMAP push sync, auth, SMTP, MIME, IPC protocol"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt", "net", "time", "sync", "macros", "io-util"] }
+futures.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+mail-parser.workspace = true
+mail-builder.workspace = true
+async-imap = { version = "0.12", default-features = false, features = ["runtime-tokio"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12", "logging"] }
+rustls-platform-verifier = "0.7"
+rusqlite = { version = "0.43", features = ["bundled"] }
+ammonia = "4"
+lettre = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1", "tokio1-rustls", "rustls-platform-verifier", "ring", "builder"] }
+ureq = { version = "3", default-features = false, features = ["rustls", "platform-verifier", "json"] }
+keyring = "4"
+base64 = "0.23"
+sha2 = "0.11"
+rand = "0.10"
+url = "2"
+percent-encoding = "2"
+socket2 = { version = "0.6", features = ["all"] }
+dirs = "7"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+html-escape = "0.3"
+mime_guess = "2"
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "test-util"] }

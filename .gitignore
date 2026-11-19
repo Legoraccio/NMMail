@@ -1,0 +1,30 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# .NET / WinUI
+bin/
+obj/
+*.user
+*.suo
+.vs/
+AppPackages/
+BundleArtifacts/
+*.pfx
+
+# Build output
+/dist/
+/publish/
+
+# Local secrets / config (never commit OAuth client secrets or tokens)
+.env
+.env.*
+oauth.local.toml
+*.local.toml
+
+# OS / editors
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
