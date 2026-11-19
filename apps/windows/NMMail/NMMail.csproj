@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>NMMail</RootNamespace>
+    <AssemblyName>NMMail</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\..\assets\icon\nmmail.ico</ApplicationIcon>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+
+    <!-- WinUI 3, unpackaged, Windows App SDK runtime shipped next to the exe -->
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <DefaultLanguage>it-IT</DefaultLanguage>
+    <!-- Custom Main in Program.cs (single instance + activation redirection) -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <SatelliteResourceLanguages>en;it</SatelliteResourceLanguages>
+
+    <!-- Native AOT: analyzers run on every build so trim/AOT problems surface early -->
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+    <CsWinRTAotWarningLevel>2</CsWinRTAotWarningLevel>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Keep the publish folder distribution-ready: the native PDB stays in the intermediate/bin folders. -->
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+
+    <Version>0.1.0</Version>
+    <Product>NM Mail</Product>
+    <Company>NM Mail</Company>
+    <Description>NM Mail (Never Miss Mail)</Description>
+  </PropertyGroup>
+
+  <!--
+    Windows App SDK 2.x is split into component packages; the Microsoft.WindowsAppSDK metapackage also pulls
+    AI/ML/Widgets/Search (onnxruntime, DirectML, ... ~70 MB) into a self-contained app. NM Mail only needs WinUI
+    (which brings Base + Foundation + InteractiveExperiences + WebView2), so reference the components directly.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.7.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.7.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared with the daemon (tray / toast identity): keep the file names. -->
+    <Content Include="..\..\..\assets\icon\nmmail.ico" Link="Assets\nmmail.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\..\assets\icon\nmmail.png" Link="Assets\nmmail.png" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Compose editor page (contenteditable + strict CSP), loaded with NavigateToString -->
+    <None Remove="Assets\editor.html" />
+    <Content Remove="Assets\editor.html" />
+    <EmbeddedResource Include="Assets\editor.html" LogicalName="NMMail.Assets.editor.html" />
+  </ItemGroup>
+
+</Project>

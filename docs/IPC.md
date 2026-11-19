@@ -7,7 +7,7 @@ La UI non accede mai direttamente al database né alla rete: tutto passa da qui.
 
 | OS | Endpoint |
 |---|---|
-| Windows | named pipe `\\.\pipe\nmmail-<USERNAME>` (solo utente corrente, niente client remoti) |
+| Windows | named pipe `\\.\pipe\nmmail-<USERNAME>`: DACL che concede accesso solo al SID dell'utente corrente, client remoti rifiutati; la UI si connette con livello di impersonazione *Identification* (`NMMAIL_PIPE` sovrascrive il nome per i test) |
 | macOS | socket Unix `~/Library/Application Support/NMMail/nmmail.sock` |
 | Linux | socket Unix `$XDG_RUNTIME_DIR/nmmail.sock` |
 
@@ -106,9 +106,9 @@ type Settings = {
 | `daemon.status` | – | `{version, pid, uptimeSec, memoryBytes, accounts: Account[]}` |
 | `daemon.shutdown` | – | `{}` |
 | `accounts.list` | – | `{accounts: Account[]}` |
-| `accounts.addOAuth` | `{provider: "gmail" \| "outlook"}` | `{account: Account}` — apre il browser, può durare minuti |
+| `accounts.addOAuth` | `{provider: "gmail" \| "outlook"}` | `{account: Account}` — apre il browser, può durare minuti. Se l'indirizzo esiste già è un **nuovo accesso** (token aggiornati, account riavviato) |
 | `accounts.cancelAuth` | – | `{}` |
-| `accounts.addImap` | `{email, displayName, username?, password, imapHost, imapPort, imapSecurity, smtpHost, smtpPort, smtpSecurity}` (`security`: `"tls"\|"starttls"\|"none"`) | `{account: Account}` |
+| `accounts.addImap` | `{email, displayName, username?, password, imapHost, imapPort, imapSecurity, smtpHost, smtpPort, smtpSecurity}` (`security`: `"tls"\|"starttls"\|"none"`) | `{account: Account}` — il login viene verificato prima di salvare. Se l'indirizzo esiste già è un **nuovo accesso** (password e server aggiornati) |
 | `accounts.update` | `{id, displayName?, notify?, notifyFilter?}` | `{account: Account}` |
 | `accounts.remove` | `{id}` | `{}` |
 | `folders.list` | `{accountId?}` | `{folders: Folder[]}` |
@@ -121,10 +121,10 @@ type Settings = {
 | `messages.delete` | `{ids}` | `{}` (sposta nel Cestino; se già nel Cestino elimina) |
 | `messages.move` | `{ids, folderId}` | `{}` |
 | `messages.search` | `{query, accountId?, limit?}` | `{messages: MessageSummary[]}` |
-| `attachments.save` | `{messageId, partId, path}` | `{path}` |
+| `attachments.save` | `{messageId, partId, path}` | `{path}` — crea le cartelle mancanti e **sovrascrive** un file esistente |
 | `contacts.suggest` | `{prefix, limit?}` | `{contacts: Addr[]}` |
-| `compose.prepare` | `{mode: "reply" \| "replyAll" \| "forward", messageId, lang?: "it" \| "en"}` | `{accountId, to, cc, subject, html, text, inReplyTo, references, attachments: {messageId, partId, filename, size}[]}` |
-| `compose.send` | `{accountId, to, cc, bcc, subject, html, text, attachments: string[] (path), forwardAttachments?: {messageId, partId}[], inReplyTo?, references?, replyToMessageId?}` | `{outboxId, queued}` — invio immediato; se offline `queued: true` e il messaggio parte appena torna la rete (`outbox.sent`). Errori permanenti (indirizzo rifiutato…) arrivano come errore della richiesta |
+| `compose.prepare` | `{mode: "reply" \| "replyAll" \| "forward", messageId, lang?: "it" \| "en"}` | `{accountId, to: Addr[], cc: Addr[], subject, html, text, inReplyTo: string \| null, references: string \| null, attachments: {messageId, partId, filename, size}[]}` — `inReplyTo`/`references` vanno ripassati invariati a `compose.send` |
+| `compose.send` | `{accountId, to: Addr[], cc: Addr[], bcc: Addr[], subject, html, text, attachments: string[] (path), forwardAttachments?: {messageId, partId}[], inReplyTo?: string, references?: string, replyToMessageId?: number}` | `{outboxId, queued}` — invio immediato; se offline `queued: true` e il messaggio parte appena torna la rete (`outbox.sent`). Errori permanenti (indirizzo rifiutato…) arrivano come errore della richiesta |
 | `settings.get` | – | `{settings: Settings}` |
 | `settings.set` | `Partial<Settings>` | `{settings: Settings}` |
 | `sync.now` | `{accountId?}` | `{}` |

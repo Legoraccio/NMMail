@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- ===================== code strings (Loc.Get) -->
+  <data name="App_LanguageCode" xml:space="preserve"><value>it</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Annulla</value></data>
+  <data name="Message_NoSender" xml:space="preserve"><value>(mittente sconosciuto)</value></data>
+  <data name="Message_NoSubject" xml:space="preserve"><value>(nessun oggetto)</value></data>
+  <data name="Sidebar_UnifiedInbox" xml:space="preserve"><value>Posta in arrivo</value></data>
+  <data name="AccountState_Online" xml:space="preserve"><value>Connesso</value></data>
+  <data name="AccountState_Connecting" xml:space="preserve"><value>Connessione in corso…</value></data>
+  <data name="AccountState_Offline" xml:space="preserve"><value>Offline</value></data>
+  <data name="AccountState_AuthRequired" xml:space="preserve"><value>Accesso richiesto</value></data>
+  <data name="AccountState_Error" xml:space="preserve"><value>Errore</value></data>
+  <data name="Group_Today" xml:space="preserve"><value>Oggi</value></data>
+  <data name="Group_Yesterday" xml:space="preserve"><value>Ieri</value></data>
+  <data name="Group_ThisWeek" xml:space="preserve"><value>Questa settimana</value></data>
+  <data name="Group_ThisMonth" xml:space="preserve"><value>Questo mese</value></data>
+  <data name="Group_Older" xml:space="preserve"><value>Più vecchi</value></data>
+  <data name="List_AllAccounts" xml:space="preserve"><value>Tutti gli account</value></data>
+  <data name="List_SearchResults" xml:space="preserve"><value>Risultati per «{0}»</value></data>
+  <data name="List_SearchCount" xml:space="preserve"><value>{0} risultati</value></data>
+  <data name="List_EmptySearch" xml:space="preserve"><value>Nessun risultato per «{0}»</value></data>
+  <data name="List_EmptyNoAccounts" xml:space="preserve"><value>Nessun account configurato. Aggiungi Gmail, Outlook o un account IMAP per iniziare.</value></data>
+  <data name="List_EmptyUnread" xml:space="preserve"><value>Hai letto tutto!</value></data>
+  <data name="List_Empty" xml:space="preserve"><value>Nessun messaggio in questa cartella</value></data>
+  <data name="Reader_NotFound" xml:space="preserve"><value>Il messaggio non esiste più: potrebbe essere stato spostato o eliminato da un altro dispositivo.</value></data>
+  <data name="Reader_LoadError" xml:space="preserve"><value>Impossibile aprire il messaggio.</value></data>
+  <data name="Reader_MultipleSelected" xml:space="preserve"><value>{0} messaggi selezionati</value></data>
+  <data name="Reader_MarkRead" xml:space="preserve"><value>Segna come letto</value></data>
+  <data name="Reader_MarkUnread" xml:space="preserve"><value>Segna come non letto</value></data>
+  <data name="Reader_To" xml:space="preserve"><value>A:</value></data>
+  <data name="Reader_Cc" xml:space="preserve"><value>Cc:</value></data>
+  <data name="Attachment_Unnamed" xml:space="preserve"><value>allegato</value></data>
+  <data name="Attachment_FileType" xml:space="preserve"><value>File {0}</value></data>
+  <data name="Attachment_BlockedTitle" xml:space="preserve"><value>Allegato potenzialmente pericoloso</value></data>
+  <data name="Attachment_BlockedMessage" xml:space="preserve"><value>Per sicurezza NM Mail non apre direttamente programmi e script. Usa «Salva con nome…» (clic destro sull'allegato) se ti fidi del mittente.</value></data>
+  <data name="Attachment_Saved" xml:space="preserve"><value>Allegato salvato</value></data>
+  <data name="Error_Attachment" xml:space="preserve"><value>Impossibile aprire l'allegato</value></data>
+  <data name="Error_LoadAccounts" xml:space="preserve"><value>Impossibile caricare gli account</value></data>
+  <data name="Error_LoadList" xml:space="preserve"><value>Impossibile caricare i messaggi</value></data>
+  <data name="Error_LoadOlder" xml:space="preserve"><value>Impossibile scaricare i messaggi meno recenti</value></data>
+  <data name="Error_OpenMessage" xml:space="preserve"><value>Impossibile aprire il messaggio</value></data>
+  <data name="Error_Archive" xml:space="preserve"><value>Archiviazione non riuscita</value></data>
+  <data name="Error_Delete" xml:space="preserve"><value>Eliminazione non riuscita</value></data>
+  <data name="Error_Move" xml:space="preserve"><value>Spostamento non riuscito</value></data>
+  <data name="Error_Action" xml:space="preserve"><value>Operazione non riuscita</value></data>
+  <data name="Error_Sync" xml:space="preserve"><value>Sincronizzazione non riuscita</value></data>
+  <data name="Error_ServiceUnavailable" xml:space="preserve"><value>Il servizio NM Mail non risponde.</value></data>
+  <data name="Error_Settings" xml:space="preserve"><value>Impossibile salvare le impostazioni</value></data>
+  <data name="Error_RemoveAccount" xml:space="preserve"><value>Impossibile rimuovere l'account</value></data>
+  <data name="Error_AddAccount" xml:space="preserve"><value>Impossibile aggiungere l'account</value></data>
+  <data name="Error_WebView" xml:space="preserve"><value>Impossibile avviare il visualizzatore dei messaggi (WebView2).</value></data>
+  <data name="Notice_Sent" xml:space="preserve"><value>Messaggio inviato</value></data>
+  <data name="Notice_SendFailed" xml:space="preserve"><value>Invio non riuscito</value></data>
+  <data name="Notice_Queued" xml:space="preserve"><value>Messaggio in coda, verrà inviato appena torna la connessione</value></data>
+  <data name="Auth_Title" xml:space="preserve"><value>Accedi con {0}</value></data>
+  <data name="Auth_Starting" xml:space="preserve"><value>Avvio dell'accesso…</value></data>
+  <data name="Auth_Browser" xml:space="preserve"><value>Completa l'accesso nel browser…</value></data>
+  <data name="Auth_Exchanging" xml:space="preserve"><value>Verifica dell'autorizzazione…</value></data>
+  <data name="Auth_Connecting" xml:space="preserve"><value>Connessione al server di posta…</value></data>
+  <data name="Auth_Done" xml:space="preserve"><value>Fatto!</value></data>
+  <data name="Auth_OpenAgain" xml:space="preserve"><value>Riapri la pagina di accesso</value></data>
+  <data name="Auth_Added" xml:space="preserve"><value>Account {0} pronto</value></data>
+  <data name="Imap_ReauthTitle" xml:space="preserve"><value>Accedi di nuovo</value></data>
+  <data name="Imap_ErrorEmail" xml:space="preserve"><value>Inserisci un indirizzo e-mail valido.</value></data>
+  <data name="Imap_ErrorPassword" xml:space="preserve"><value>Inserisci la password.</value></data>
+  <data name="Imap_ErrorHost" xml:space="preserve"><value>Inserisci i server IMAP e SMTP.</value></data>
+  <data name="Imap_ErrorPort" xml:space="preserve"><value>Inserisci porte valide.</value></data>
+  <data name="Settings_PausedUntil" xml:space="preserve"><value>In pausa fino a {0}</value></data>
+  <data name="Settings_NotPaused" xml:space="preserve"><value>Le notifiche sono attive</value></data>
+  <data name="Settings_TestSent" xml:space="preserve"><value>Notifica di prova inviata</value></data>
+  <data name="Settings_TestDisabled" xml:space="preserve"><value>Windows non mostra le notifiche di NM Mail</value></data>
+  <data name="Settings_DaemonUnavailable" xml:space="preserve"><value>non raggiungibile</value></data>
+  <data name="Settings_VersionLabel" xml:space="preserve"><value>Versione</value></data>
+  <data name="Settings_RemoveTitle" xml:space="preserve"><value>Rimuovere l'account?</value></data>
+  <data name="Settings_RemoveMessage" xml:space="preserve"><value>{0} e le e-mail salvate su questo PC verranno rimossi da NM Mail. I messaggi restano sul server.</value></data>
+  <data name="Settings_RemoveConfirm" xml:space="preserve"><value>Rimuovi</value></data>
+  <data name="Settings_OAuthSaved" xml:space="preserve"><value>Credenziali OAuth salvate</value></data>
+  <data name="Confirm_ShutdownTitle" xml:space="preserve"><value>Arrestare il servizio in background?</value></data>
+  <data name="Confirm_ShutdownMessage" xml:space="preserve"><value>Finché non riapri NM Mail non riceverai notifiche per le nuove e-mail.</value></data>
+  <data name="Confirm_ShutdownButton" xml:space="preserve"><value>Arresta</value></data>
+  <data name="Compose_NewTitle" xml:space="preserve"><value>Nuovo messaggio</value></data>
+  <data name="Compose_Placeholder" xml:space="preserve"><value>Scrivi il tuo messaggio…</value></data>
+  <data name="Compose_ErrorPrepare" xml:space="preserve"><value>Impossibile preparare il messaggio.</value></data>
+  <data name="Compose_ErrorNoAccount" xml:space="preserve"><value>Scegli l'account da cui inviare.</value></data>
+  <data name="Compose_ErrorNoRecipients" xml:space="preserve"><value>Aggiungi almeno un destinatario.</value></data>
+  <data name="Compose_ErrorInvalidAddress" xml:space="preserve"><value>Indirizzo non valido: {0}</value></data>
+  <data name="Compose_WarningLarge" xml:space="preserve"><value>Gli allegati superano 25 MB: alcuni server potrebbero rifiutare il messaggio.</value></data>
+  <data name="Compose_NoAccounts" xml:space="preserve"><value>Aggiungi un account per scrivere un messaggio.</value></data>
+  <data name="Compose_LinkTitle" xml:space="preserve"><value>Inserisci collegamento</value></data>
+  <data name="Compose_LinkInsert" xml:space="preserve"><value>Inserisci</value></data>
+  <data name="Compose_DiscardTitle" xml:space="preserve"><value>Eliminare la bozza?</value></data>
+  <data name="Compose_DiscardMessage" xml:space="preserve"><value>Il messaggio non è stato inviato e andrà perso.</value></data>
+  <data name="Compose_DiscardConfirm" xml:space="preserve"><value>Elimina bozza</value></data>
+  <data name="Compose_KeepEditing" xml:space="preserve"><value>Continua a scrivere</value></data>
+  <data name="Exit_DraftsTitle" xml:space="preserve"><value>Chiudere NM Mail?</value></data>
+  <data name="Exit_DraftsMessage" xml:space="preserve"><value>Ci sono messaggi non inviati: chiudendo andranno persi.</value></data>
+  <data name="Exit_DraftsConfirm" xml:space="preserve"><value>Chiudi comunque</value></data>
+  <data name="Splitter_Sidebar" xml:space="preserve"><value>Ridimensiona l'elenco delle cartelle</value></data>
+  <data name="Splitter_List" xml:space="preserve"><value>Ridimensiona l'elenco dei messaggi</value></data>
+  <data name="Accessibility_Unread" xml:space="preserve"><value>Non letto</value></data>
+  <data name="Accessibility_UnreadCount" xml:space="preserve"><value>{0} non letti</value></data>
+
+  <!-- ===================== XAML (x:Uid) -->
+  <data name="SearchBox.PlaceholderText" xml:space="preserve"><value>Cerca nella posta</value></data>
+  <data name="TitleBar_Sync.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sincronizza ora (F5)</value></data>
+  <data name="TitleBar_Sync.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sincronizza ora</value></data>
+  <data name="ConnectionBar.Message" xml:space="preserve"><value>Servizio NM Mail non raggiungibile, riconnessione…</value></data>
+
+  <data name="Sidebar_NewMailButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Nuovo messaggio</value></data>
+  <data name="Sidebar_NewMailButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Nuovo messaggio (Ctrl+N)</value></data>
+  <data name="Sidebar_SettingsButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Impostazioni</value></data>
+  <data name="Compose_SendButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Invia</value></data>
+  <data name="Compose_AttachButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Allega file</value></data>
+  <data name="Sidebar_NewMail.Text" xml:space="preserve"><value>Nuovo messaggio</value></data>
+  <data name="Sidebar_Settings.Text" xml:space="preserve"><value>Impostazioni</value></data>
+  <data name="Sidebar_Reauth.Content" xml:space="preserve"><value>Accedi di nuovo</value></data>
+
+  <data name="List_ClearSearch.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Chiudi la ricerca (Esc)</value></data>
+  <data name="List_ClearSearch.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Chiudi la ricerca</value></data>
+  <data name="List_UnreadOnly.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Mostra solo i non letti</value></data>
+  <data name="List_UnreadOnly.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Solo non letti</value></data>
+  <data name="List_AddAccount.Content" xml:space="preserve"><value>Aggiungi un account</value></data>
+  <data name="Quick_Archive.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Archivia (E)</value></data>
+  <data name="Quick_Archive.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Archivia</value></data>
+  <data name="Quick_Delete.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Elimina (Canc)</value></data>
+  <data name="Quick_Delete.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Elimina</value></data>
+  <data name="Quick_ToggleRead.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Segna come letto / non letto</value></data>
+  <data name="Quick_ToggleRead.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Segna come letto o non letto</value></data>
+  <data name="Quick_Flag.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Contrassegna</value></data>
+  <data name="Quick_Flag.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Contrassegna</value></data>
+  <data name="Menu_Reply.Text" xml:space="preserve"><value>Rispondi</value></data>
+  <data name="Menu_ReplyAll.Text" xml:space="preserve"><value>Rispondi a tutti</value></data>
+  <data name="Menu_Forward.Text" xml:space="preserve"><value>Inoltra</value></data>
+  <data name="Menu_MarkRead.Text" xml:space="preserve"><value>Segna come letto</value></data>
+  <data name="Menu_MarkUnread.Text" xml:space="preserve"><value>Segna come non letto</value></data>
+  <data name="Menu_Flag.Text" xml:space="preserve"><value>Contrassegna</value></data>
+  <data name="Menu_Archive.Text" xml:space="preserve"><value>Archivia</value></data>
+  <data name="Menu_Delete.Text" xml:space="preserve"><value>Elimina</value></data>
+  <data name="Menu_MoveTo.Text" xml:space="preserve"><value>Sposta in</value></data>
+
+  <data name="Reader_Empty.Text" xml:space="preserve"><value>Seleziona un messaggio da leggere</value></data>
+  <data name="Reader_Reply.Label" xml:space="preserve"><value>Rispondi</value></data>
+  <data name="Reader_ReplyAll.Label" xml:space="preserve"><value>Rispondi a tutti</value></data>
+  <data name="Reader_Forward.Label" xml:space="preserve"><value>Inoltra</value></data>
+  <data name="Reader_Archive.Label" xml:space="preserve"><value>Archivia</value></data>
+  <data name="Reader_Delete.Label" xml:space="preserve"><value>Elimina</value></data>
+  <data name="Reader_Flag.Label" xml:space="preserve"><value>Contrassegna</value></data>
+  <data name="Reader_Move.Label" xml:space="preserve"><value>Sposta in…</value></data>
+  <data name="Reader_RemoteBlocked.Message" xml:space="preserve"><value>Immagini remote bloccate per la tua privacy</value></data>
+  <data name="Reader_ShowImages.Content" xml:space="preserve"><value>Mostra immagini</value></data>
+  <data name="Multi_Archive.Text" xml:space="preserve"><value>Archivia</value></data>
+  <data name="Multi_Delete.Text" xml:space="preserve"><value>Elimina</value></data>
+  <data name="Multi_MarkRead.Text" xml:space="preserve"><value>Segna come letti</value></data>
+  <data name="Multi_Flag.Text" xml:space="preserve"><value>Contrassegna</value></data>
+  <data name="Attachment_Open.Text" xml:space="preserve"><value>Apri</value></data>
+  <data name="Attachment_SaveAs.Text" xml:space="preserve"><value>Salva con nome…</value></data>
+
+  <data name="Compose_SendButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Invia (Ctrl+Invio)</value></data>
+  <data name="Compose_Send.Text" xml:space="preserve"><value>Invia</value></data>
+  <data name="Compose_Attach.Text" xml:space="preserve"><value>Allega</value></data>
+  <data name="Compose_Bold.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Grassetto (Ctrl+B)</value></data>
+  <data name="Compose_Bold.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Grassetto</value></data>
+  <data name="Compose_Italic.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Corsivo (Ctrl+I)</value></data>
+  <data name="Compose_Italic.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Corsivo</value></data>
+  <data name="Compose_Underline.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Sottolineato (Ctrl+U)</value></data>
+  <data name="Compose_Underline.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Sottolineato</value></data>
+  <data name="Compose_Bullets.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Elenco puntato</value></data>
+  <data name="Compose_Bullets.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Elenco puntato</value></data>
+  <data name="Compose_Numbering.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Elenco numerato</value></data>
+  <data name="Compose_Numbering.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Elenco numerato</value></data>
+  <data name="Compose_Link.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Inserisci collegamento</value></data>
+  <data name="Compose_Link.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Inserisci collegamento</value></data>
+  <data name="Compose_ClearFormatting.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Cancella formattazione</value></data>
+  <data name="Compose_ClearFormatting.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Cancella formattazione</value></data>
+  <data name="Compose_From.Text" xml:space="preserve"><value>Da</value></data>
+  <data name="Compose_To.Text" xml:space="preserve"><value>A</value></data>
+  <data name="Compose_Bcc.Text" xml:space="preserve"><value>Ccn</value></data>
+  <data name="Compose_ShowCcBcc.Content" xml:space="preserve"><value>Cc/Ccn</value></data>
+  <data name="Compose_Subject.Text" xml:space="preserve"><value>Oggetto</value></data>
+  <data name="Compose_RemoveAttachment.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Rimuovi allegato</value></data>
+  <data name="Compose_RemoveAttachment.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Rimuovi allegato</value></data>
+
+  <data name="ImapDialog.Title" xml:space="preserve"><value>Aggiungi un account IMAP</value></data>
+  <data name="ImapDialog.PrimaryButtonText" xml:space="preserve"><value>Aggiungi</value></data>
+  <data name="ImapDialog.CloseButtonText" xml:space="preserve"><value>Annulla</value></data>
+  <data name="Imap_Email.Header" xml:space="preserve"><value>Indirizzo e-mail</value></data>
+  <data name="Imap_Email.PlaceholderText" xml:space="preserve"><value>nome@esempio.it</value></data>
+  <data name="Imap_Name.Header" xml:space="preserve"><value>Nome visualizzato</value></data>
+  <data name="Imap_Username.Header" xml:space="preserve"><value>Nome utente (se diverso dall'indirizzo)</value></data>
+  <data name="Imap_Password.Header" xml:space="preserve"><value>Password o password per app</value></data>
+  <data name="Imap_Incoming.Text" xml:space="preserve"><value>Posta in arrivo (IMAP)</value></data>
+  <data name="Imap_Outgoing.Text" xml:space="preserve"><value>Posta in uscita (SMTP)</value></data>
+  <data name="Imap_Host.Header" xml:space="preserve"><value>Server</value></data>
+  <data name="Imap_Port.Header" xml:space="preserve"><value>Porta</value></data>
+  <data name="Imap_Security.Header" xml:space="preserve"><value>Sicurezza</value></data>
+  <data name="Imap_SecurityNone.Content" xml:space="preserve"><value>Nessuna</value></data>
+  <data name="Imap_TestHint.Text" xml:space="preserve"><value>Server di test locale: 127.0.0.1, IMAP 1143, SMTP 1025, sicurezza «Nessuna».</value></data>
+
+  <data name="Settings_Back.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Torna alla posta (Esc)</value></data>
+  <data name="Settings_Back.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Indietro</value></data>
+  <data name="Settings_Title.Text" xml:space="preserve"><value>Impostazioni</value></data>
+  <data name="Settings_SectionAccounts.Text" xml:space="preserve"><value>Account</value></data>
+  <data name="Settings_SectionNotifications.Text" xml:space="preserve"><value>Notifiche</value></data>
+  <data name="Settings_SectionGeneral.Text" xml:space="preserve"><value>Generale</value></data>
+  <data name="Settings_SectionStorage.Text" xml:space="preserve"><value>Archiviazione</value></data>
+  <data name="Settings_SectionAbout.Text" xml:space="preserve"><value>Informazioni</value></data>
+  <data name="Settings_AccountsHeader.Text" xml:space="preserve"><value>Account collegati</value></data>
+  <data name="Settings_NoAccounts.Text" xml:space="preserve"><value>Nessun account. Aggiungine uno per iniziare a ricevere la posta.</value></data>
+  <data name="Settings_AccountNotify.OnContent" xml:space="preserve"><value>Notifiche attive</value></data>
+  <data name="Settings_AccountNotify.OffContent" xml:space="preserve"><value>Notifiche disattivate</value></data>
+  <data name="Settings_GmailPrimary.Content" xml:space="preserve"><value>Notifica solo la scheda Principale</value></data>
+  <data name="Settings_RemoveAccount.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Rimuovi account</value></data>
+  <data name="Settings_RemoveAccount.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Rimuovi account</value></data>
+  <data name="Settings_AddAccountTitle.Text" xml:space="preserve"><value>Aggiungi un account</value></data>
+  <data name="Settings_AddAccountDescription.Text" xml:space="preserve"><value>Gmail e Outlook con accesso sicuro dal browser, oppure qualsiasi server IMAP.</value></data>
+  <data name="Settings_AddAccountButton.Content" xml:space="preserve"><value>Aggiungi account</value></data>
+  <data name="Settings_AddImap.Text" xml:space="preserve"><value>Altro (IMAP)…</value></data>
+  <data name="Settings_NotificationsHeader.Text" xml:space="preserve"><value>Notifiche</value></data>
+  <data name="Settings_NotifyEnabled.Text" xml:space="preserve"><value>Mostra una notifica per ogni nuova e-mail</value></data>
+  <data name="Settings_NotifyEnabledDescription.Text" xml:space="preserve"><value>Anche quando la finestra di NM Mail è chiusa.</value></data>
+  <data name="Settings_NotifySound.Text" xml:space="preserve"><value>Riproduci un suono</value></data>
+  <data name="Settings_NotifyPreview.Text" xml:space="preserve"><value>Mostra l'anteprima</value></data>
+  <data name="Settings_NotifyPreviewDescription.Text" xml:space="preserve"><value>Mittente, oggetto e prime righe del messaggio nella notifica.</value></data>
+  <data name="Settings_Pause.Text" xml:space="preserve"><value>Sospendi le notifiche</value></data>
+  <data name="Settings_PauseHour.Content" xml:space="preserve"><value>1 ora</value></data>
+  <data name="Settings_PauseTomorrow.Content" xml:space="preserve"><value>Fino a domani</value></data>
+  <data name="Settings_Resume.Content" xml:space="preserve"><value>Riprendi</value></data>
+  <data name="Settings_TestTitle.Text" xml:space="preserve"><value>Notifica di prova</value></data>
+  <data name="Settings_TestButton.Content" xml:space="preserve"><value>Invia notifica di prova</value></data>
+  <data name="Settings_NotificationsDisabled.Title" xml:space="preserve"><value>Le notifiche di NM Mail sono disattivate in Windows</value></data>
+  <data name="Settings_NotificationsDisabled.Message" xml:space="preserve"><value>Attivale in Impostazioni di Windows → Sistema → Notifiche.</value></data>
+  <data name="Settings_OpenNotificationSettings.Content" xml:space="preserve"><value>Apri impostazioni notifiche</value></data>
+  <data name="Settings_GeneralHeader.Text" xml:space="preserve"><value>Generale</value></data>
+  <data name="Settings_Autostart.Text" xml:space="preserve"><value>Avvia NM Mail all'accesso a Windows</value></data>
+  <data name="Settings_AutostartDescription.Text" xml:space="preserve"><value>Il servizio in background (pochi MB) riceve le e-mail e mostra le notifiche anche a finestra chiusa.</value></data>
+  <data name="Settings_Theme.Text" xml:space="preserve"><value>Tema</value></data>
+  <data name="Settings_ThemeSystem.Content" xml:space="preserve"><value>Usa le impostazioni di sistema</value></data>
+  <data name="Settings_ThemeLight.Content" xml:space="preserve"><value>Chiaro</value></data>
+  <data name="Settings_ThemeDark.Content" xml:space="preserve"><value>Scuro</value></data>
+  <data name="Settings_Language.Text" xml:space="preserve"><value>Lingua</value></data>
+  <data name="Settings_LanguageSystem.Content" xml:space="preserve"><value>Lingua di Windows</value></data>
+  <data name="Settings_LanguageRestart.Message" xml:space="preserve"><value>La nuova lingua verrà applicata al prossimo avvio di NM Mail.</value></data>
+  <data name="Settings_StorageHeader.Text" xml:space="preserve"><value>Archiviazione</value></data>
+  <data name="Settings_CacheDays.Text" xml:space="preserve"><value>Conserva sul PC le e-mail degli ultimi</value></data>
+  <data name="Settings_CacheDaysDescription.Text" xml:space="preserve"><value>Le e-mail più vecchie restano sul server e vengono scaricate solo quando scorri fino a loro.</value></data>
+  <data name="Settings_Cache30.Content" xml:space="preserve"><value>30 giorni</value></data>
+  <data name="Settings_Cache90.Content" xml:space="preserve"><value>90 giorni</value></data>
+  <data name="Settings_Cache180.Content" xml:space="preserve"><value>180 giorni</value></data>
+  <data name="Settings_Cache365.Content" xml:space="preserve"><value>1 anno</value></data>
+  <data name="Settings_OAuthHeader.Text" xml:space="preserve"><value>Credenziali OAuth</value></data>
+  <data name="Settings_OAuthDescription.Text" xml:space="preserve"><value>Per collegare Gmail e Outlook, NM Mail usa un'app OAuth registrata da te (gratuita, nessun server di terze parti). Segui la guida passo-passo in docs/OAUTH_SETUP.md e incolla qui gli identificativi.</value></data>
+  <data name="Settings_GoogleClientId.Header" xml:space="preserve"><value>Client ID</value></data>
+  <data name="Settings_GoogleClientSecret.Header" xml:space="preserve"><value>Client secret</value></data>
+  <data name="Settings_MicrosoftClientId.Header" xml:space="preserve"><value>Client ID (ID applicazione)</value></data>
+  <data name="Settings_SaveOAuth.Content" xml:space="preserve"><value>Salva</value></data>
+  <data name="Settings_AboutHeader.Text" xml:space="preserve"><value>Informazioni</value></data>
+  <data name="Settings_DaemonTitle.Text" xml:space="preserve"><value>Servizio in background (nmmaild)</value></data>
+  <data name="Settings_Refresh.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve"><value>Aggiorna</value></data>
+  <data name="Settings_Refresh.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Aggiorna</value></data>
+  <data name="Settings_DaemonVersion.Text" xml:space="preserve"><value>Versione</value></data>
+  <data name="Settings_DaemonPid.Text" xml:space="preserve"><value>PID</value></data>
+  <data name="Settings_DaemonUptime.Text" xml:space="preserve"><value>Attivo da</value></data>
+  <data name="Settings_DaemonMemory.Text" xml:space="preserve"><value>Memoria</value></data>
+  <data name="Settings_UiMemory.Text" xml:space="preserve"><value>Memoria di questa finestra</value></data>
+  <data name="Settings_Shutdown.Text" xml:space="preserve"><value>Arresta il servizio in background</value></data>
+  <data name="Settings_ShutdownDescription.Text" xml:space="preserve"><value>Le nuove e-mail non verranno più notificate finché NM Mail non viene riaperto.</value></data>
+  <data name="Settings_ShutdownButton.Content" xml:space="preserve"><value>Arresta</value></data>
+</root>

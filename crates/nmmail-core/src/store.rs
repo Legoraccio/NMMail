@@ -329,6 +329,33 @@ impl Store {
         self.account(id)
     }
 
+    /// Replaces how an account connects (used when the user signs in again).
+    pub fn update_account_connection(
+        &self,
+        id: AccountId,
+        username: &str,
+        auth: AuthKind,
+        imap: &ServerConfig,
+        smtp: &ServerConfig,
+    ) -> Result<()> {
+        self.db().execute(
+            "UPDATE accounts SET username=?1, auth=?2, imap_host=?3, imap_port=?4, imap_security=?5,
+                smtp_host=?6, smtp_port=?7, smtp_security=?8 WHERE id=?9",
+            params![
+                username,
+                auth.as_str(),
+                imap.host,
+                imap.port,
+                imap.security.as_str(),
+                smtp.host,
+                smtp.port,
+                smtp.security.as_str(),
+                id
+            ],
+        )?;
+        Ok(())
+    }
+
     pub fn accounts(&self) -> Result<Vec<AccountConfig>> {
         let db = self.db();
         let mut st = db.prepare("SELECT * FROM accounts ORDER BY id")?;

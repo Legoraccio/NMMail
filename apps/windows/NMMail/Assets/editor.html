@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-{{NONCE}}'; style-src 'unsafe-inline'; img-src data: cid:; form-action 'none'; base-uri 'none'">
+<meta name="color-scheme" content="light">
+<style>
+  html, body { height: 100%; margin: 0; background: #fff; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; color: #1b1b1b; }
+  #editor { min-height: 100%; box-sizing: border-box; padding: 14px 18px 40px; outline: none; line-height: 1.5; overflow-wrap: break-word; }
+  #editor.empty::before { content: attr(data-placeholder); color: #8a8a8a; pointer-events: none; position: absolute; }
+  #editor p { margin: 0 0 4px; }
+  blockquote { margin: 0 0 0 .8ex; border-left: 2px solid #ccc; padding-left: 1ex; color: #555; }
+  a { color: #0f6cbd; }
+  img { max-width: 100%; }
+</style>
+</head>
+<body>
+<div id="editor" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" data-placeholder="{{PLACEHOLDER}}"></div>
+<script nonce="{{NONCE}}">
+(function () {
+  'use strict';
+  var ed = document.getElementById('editor');
+  var initial = '';
+  var BLOCKED = 'script,iframe,frame,frameset,object,embed,applet,link,meta,base,form,input,button,select,textarea,video,audio,source,track,svg,math,noscript,template';
+
+  // Defense in depth: the daemon already sanitizes quoted HTML, but this page runs scripts.
+  function clean(root) {
+    root.querySelectorAll(BLOCKED).forEach(function (n) { n.remove(); });
+    root.querySelectorAll('*').forEach(function (el) {
+      for (var i = el.attributes.length - 1; i >= 0; i--) {
+        var a = el.attributes[i], name = a.name.toLowerCase(), value = (a.value || '').trim().toLowerCase();
+        if (name.indexOf('on') === 0 || name === 'srcdoc' || name === 'formaction') { el.removeAttribute(a.name); continue; }
+        if ((name === 'href' || name === 'src' || name === 'xlink:href' || name === 'action') &&
+            (value.indexOf('javascript:') === 0 || value.indexOf('vbscript:') === 0 || (value.indexOf('data:') === 0 && el.tagName !== 'IMG'))) {
+          el.removeAttribute(a.name);
+        }
+      }
+    });
+    return root;
+  }
+
+  function fragment(html) {
+    var t = document.createElement('template');
+    t.innerHTML = html || '';
+    return clean(t.content);
+  }
+
+  function updateEmpty() {
+    var empty = ed.textContent.trim().length === 0 && !ed.querySelector('img,li,blockquote,table,hr');
+    ed.classList.toggle('empty', empty);
+  }
+
+  function caretToStart() {
+    var range = document.createRange();
+    range.setStart(ed, 0);
+    range.collapse(true);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  window.nm = {
+    setContent: function (html) {
+      ed.innerHTML = '';
+      ed.appendChild(fragment(html));
+      initial = ed.innerHTML;
+      updateEmpty();
+      ed.focus();
+      caretToStart();
+    },
+    getHtml: function () { return ed.innerHTML; },
+    getText: function () { return ed.innerText; },
+    isDirty: function () { return ed.innerHTML !== initial; },
+    exec: function (cmd) { ed.focus(); document.execCommand(cmd, false, null); updateEmpty(); },
+    link: function (url) {
+      if (!url) { return; }
+      if (!/^(https?:|mailto:)/i.test(url)) { url = 'https://' + url; }
+      ed.focus();
+      var sel = window.getSelection();
+      if (sel && sel.isCollapsed) {
+        document.execCommand('insertHTML', false, '<a href="' + url.replace(/"/g, '&quot;') + '">' + url.replace(/</g, '&lt;') + '</a>');
+      } else {
+        document.execCommand('createLink', false, url);
+      }
+    },
+    clearFormatting: function () { ed.focus(); document.execCommand('removeFormat', false, null); document.execCommand('unlink', false, null); },
+    focus: function () { ed.focus(); }
+  };
+
+  ed.addEventListener('input', updateEmpty);
+  ed.addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.key === 'Enter') {
+      e.preventDefault();
+      if (window.chrome && window.chrome.webview) { window.chrome.webview.postMessage('send'); }
+    }
+  });
+  // Paste: keep formatting but strip anything active.
+  ed.addEventListener('paste', function (e) {
+    var data = e.clipboardData;
+    if (!data) { return; }
+    var html = data.getData('text/html');
+    e.preventDefault();
+    if (html) {
+      var holder = document.createElement('div');
+      holder.appendChild(fragment(html));
+      document.execCommand('insertHTML', false, holder.innerHTML);
+    } else {
+      document.execCommand('insertText', false, data.getData('text/plain'));
+    }
+    updateEmpty();
+  });
+  // Links are not followed inside the editor; dropped files would navigate away.
+  ed.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('a')) { e.preventDefault(); } });
+  document.addEventListener('dragover', function (e) { e.preventDefault(); });
+  document.addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) { e.preventDefault(); }
+  });
+  updateEmpty();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="NMMail.Views.ImapAccountDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Uid="ImapDialog"
+    Title="Aggiungi account IMAP"
+    PrimaryButtonText="Aggiungi"
+    CloseButtonText="Annulla"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnPrimaryButtonClick">
+
+    <StackPanel Spacing="10" MinWidth="440">
+        <TextBox x:Name="EmailBox" x:Uid="Imap_Email" Header="Indirizzo e-mail" PlaceholderText="nome@esempio.it"
+                 InputScope="EmailSmtpAddress" TextChanged="EmailBox_TextChanged" />
+        <TextBox x:Name="NameBox" x:Uid="Imap_Name" Header="Nome visualizzato" />
+        <TextBox x:Name="UserBox" x:Uid="Imap_Username" Header="Nome utente (se diverso dall'indirizzo)" />
+        <PasswordBox x:Name="PasswordInput" x:Uid="Imap_Password" Header="Password o password per app" />
+
+        <TextBlock x:Uid="Imap_Incoming" Text="Posta in arrivo (IMAP)" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="96" />
+                <ColumnDefinition Width="128" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="ImapHostBox" x:Uid="Imap_Host" Header="Server" PlaceholderText="imap.esempio.it" TextChanged="Host_TextChanged" />
+            <NumberBox x:Name="ImapPortBox" x:Uid="Imap_Port" Grid.Column="1" Header="Porta" Value="993" Minimum="1" Maximum="65535"
+                       SpinButtonPlacementMode="Hidden" />
+            <ComboBox x:Name="ImapSecurityBox" x:Uid="Imap_Security" Grid.Column="2" Header="Sicurezza" SelectedIndex="0"
+                      HorizontalAlignment="Stretch" SelectionChanged="Security_SelectionChanged">
+                <ComboBoxItem Content="SSL/TLS" />
+                <ComboBoxItem Content="STARTTLS" />
+                <ComboBoxItem x:Uid="Imap_SecurityNone" Content="Nessuna" />
+            </ComboBox>
+        </Grid>
+
+        <TextBlock x:Uid="Imap_Outgoing" Text="Posta in uscita (SMTP)" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,8,0,0" />
+        <Grid ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="96" />
+                <ColumnDefinition Width="128" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="SmtpHostBox" x:Uid="Imap_Host" Header="Server" PlaceholderText="smtp.esempio.it" TextChanged="Host_TextChanged" />
+            <NumberBox x:Name="SmtpPortBox" x:Uid="Imap_Port" Grid.Column="1" Header="Porta" Value="465" Minimum="1" Maximum="65535"
+                       SpinButtonPlacementMode="Hidden" />
+            <ComboBox x:Name="SmtpSecurityBox" x:Uid="Imap_Security" Grid.Column="2" Header="Sicurezza" SelectedIndex="0"
+                      HorizontalAlignment="Stretch" SelectionChanged="Security_SelectionChanged">
+                <ComboBoxItem Content="SSL/TLS" />
+                <ComboBoxItem Content="STARTTLS" />
+                <ComboBoxItem x:Uid="Imap_SecurityNone" Content="Nessuna" />
+            </ComboBox>
+        </Grid>
+
+        <TextBlock x:Uid="Imap_TestHint" Style="{StaticResource SettingsDescriptionTextStyle}"
+                   Text="Server di test locale: 127.0.0.1, IMAP 1143, SMTP 1025, sicurezza «Nessuna»." />
+        <InfoBar x:Name="ErrorBar" Severity="Error" IsClosable="False" />
+        <ProgressBar x:Name="Progress" IsIndeterminate="False" Visibility="Collapsed" />
+    </StackPanel>
+</ContentDialog>

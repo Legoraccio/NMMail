@@ -538,3 +538,41 @@ async fn xoauth2_login_for_imap_and_smtp() {
         nmmail_core::error::ErrorCode::AuthRequired
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn signing_in_again_updates_the_existing_account() {
+    let mut env = setup(1).await;
+    let params = |password: &str| ImapAccountParams {
+        email: USER.into(),
+        display_name: String::new(),
+        username: None,
+        password: password.into(),
+        imap_host: "127.0.0.1".into(),
+        imap_port: env.server.imap_addr().port(),
+        imap_security: Security::None,
+        smtp_host: "127.0.0.1".into(),
+        smtp_port: env.server.smtp_addr().port(),
+        smtp_security: Security::None,
+    };
+    // A wrong password is rejected and changes nothing.
+    assert!(env.engine.add_imap(params("wrong")).await.is_err());
+    let again = env.engine.add_imap(params("test")).await.unwrap();
+    assert_eq!(again.id, env.account.id);
+    assert_eq!(env.engine.accounts().unwrap().len(), 1);
+    // The restarted watcher still receives push.
+    let id = again.id;
+    wait_for(&mut env.events, Duration::from_secs(10), |e| match e {
+        Event::AccountStatus(a) if a.id == id && a.state == AccountState::Online => Some(()),
+        _ => None,
+    })
+    .await
+    .expect("account not back online");
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    env.server
+        .deliver(USER, "INBOX", &mail("Dopo il nuovo accesso", "ok"));
+    assert!(
+        wait_new_mail(&mut env, Duration::from_secs(5))
+            .await
+            .is_some()
+    );
+}

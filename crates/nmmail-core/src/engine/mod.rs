@@ -345,9 +345,8 @@ impl Engine {
         if !email.contains('@') {
             return Err(bad_request("invalid e-mail address"));
         }
-        if self.inner.store.account_by_email(&email)?.is_some() {
-            return Err(bad_request("account already exists"));
-        }
+        // An existing address means "sign in again" (new password / app password).
+        let existing = self.inner.store.account_by_email(&email)?;
         let username = p
             .username
             .filter(|u| !u.trim().is_empty())
@@ -368,6 +367,19 @@ impl Engine {
         };
         let (mut session, _) = conn::connect(&imap, &creds).await?;
         let _ = conn::tmo_for(Duration::from_secs(5), session.logout()).await;
+        if let Some(existing) = existing {
+            self.inner.store.update_account_connection(
+                existing.id,
+                &username,
+                AuthKind::Password,
+                &imap,
+                &smtp,
+            )?;
+            self.inner.auth.save_password(existing.id, &p.password)?;
+            self.inner.restart_account(existing.id);
+            let _ = self.inner.events.send(Event::AccountsChanged {});
+            return self.account(existing.id);
+        }
         let cfg = self.inner.store.insert_account(&NewAccount {
             provider: provider_for_host(&imap.host),
             email: email.clone(),
