@@ -939,11 +939,8 @@ impl Inner {
     fn start_account(self: &Arc<Self>, id: AccountId) {
         let (tx, rx) = mpsc::unbounded_channel();
         let wake = Arc::new(Notify::new());
-        let (me, w) = (self.clone(), wake.clone());
-        let watcher = tokio::spawn(supervised("watcher", move || {
-            account::watcher(me.clone(), id, w.clone())
-        }));
-        let worker = tokio::spawn(account::worker(self.clone(), id, rx));
+        // Register the runtime *before* spawning: on a multi-threaded runtime the
+        // watcher may report its status (or queue jobs) before this function returns.
         self.accounts.lock().unwrap().insert(
             id,
             AccountRuntime {
@@ -953,10 +950,23 @@ impl Inner {
                     last_sync: None,
                 },
                 worker: tx,
-                wake,
-                tasks: vec![watcher, worker],
+                wake: wake.clone(),
+                tasks: Vec::new(),
             },
         );
+        let (me, w) = (self.clone(), wake);
+        let watcher = tokio::spawn(supervised("watcher", move || {
+            account::watcher(me.clone(), id, w.clone())
+        }));
+        let worker = tokio::spawn(account::worker(self.clone(), id, rx));
+        match self.accounts.lock().unwrap().get_mut(&id) {
+            Some(rt) => rt.tasks = vec![watcher, worker],
+            None => {
+                // Removed meanwhile.
+                watcher.abort();
+                worker.abort();
+            }
+        }
     }
 
     fn stop_account(&self, id: AccountId) {
