@@ -1,0 +1,15 @@
+# Credenziali OAuth di NM Mail, incluse nei programmi compilati con scripts\build.ps1.
+#
+# 1. Copia questo file in "oauth.local.toml" (nella stessa cartella).
+#    oauth.local.toml è escluso da git: non finisce MAI nel repository pubblico.
+# 2. Incolla gli identificativi ottenuti registrando NM Mail presso Google e
+#    Microsoft (una volta sola, da parte di chi pubblica l'app): docs/OAUTH_SETUP.md
+# 3. Ricompila: .\scripts\build.ps1
+#
+# Le variabili d'ambiente NMMAIL_GOOGLE_CLIENT_ID, NMMAIL_GOOGLE_CLIENT_SECRET e
+# NMMAIL_MICROSOFT_CLIENT_ID, se presenti (es. secret di GitHub Actions), hanno la
+# precedenza su questo file. I campi vuoti vengono ignorati.
+
+google_client_id = ""
+google_client_secret = ""
+microsoft_client_id = ""

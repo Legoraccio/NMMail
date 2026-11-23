@@ -260,7 +260,11 @@
   <data name="Settings_Cache180.Content" xml:space="preserve"><value>180 days</value></data>
   <data name="Settings_Cache365.Content" xml:space="preserve"><value>1 year</value></data>
   <data name="Settings_OAuthHeader.Text" xml:space="preserve"><value>OAuth credentials</value></data>
-  <data name="Settings_OAuthDescription.Text" xml:space="preserve"><value>To connect Gmail and Outlook, NM Mail uses an OAuth app you register yourself (free, no third-party server). Follow the step-by-step guide in docs/OAUTH_SETUP.md and paste the identifiers here.</value></data>
+  <data name="Settings_OAuthDescription.Text" xml:space="preserve"><value>This build of NM Mail has no built-in OAuth credentials (this happens when you build it yourself). Register the app following docs/OAUTH_SETUP.md and paste the identifiers here; for Gmail you can also use an app password with “Other (IMAP)”.</value></data>
+  <data name="Settings_OAuthAdvanced.Content" xml:space="preserve"><value>Use my own credentials (advanced)</value></data>
+  <data name="Settings_OAuthBuiltInMicrosoft" xml:space="preserve"><value>This build of NM Mail already includes the credentials for Outlook. For Gmail, enter your Google credentials below, or add the account with an app password (“Other (IMAP)”).</value></data>
+  <data name="Settings_OAuthBuiltInGoogle" xml:space="preserve"><value>This build of NM Mail already includes the credentials for Gmail. For Outlook, enter below a client ID registered in Microsoft Entra.</value></data>
+  <data name="Settings_OAuthBuiltInBoth" xml:space="preserve"><value>This build of NM Mail already includes the credentials for Gmail and Outlook: there is nothing to configure, just add your account.</value></data>
   <data name="Settings_GoogleClientId.Header" xml:space="preserve"><value>Client ID</value></data>
   <data name="Settings_GoogleClientSecret.Header" xml:space="preserve"><value>Client secret</value></data>
   <data name="Settings_MicrosoftClientId.Header" xml:space="preserve"><value>Client ID (Application ID)</value></data>

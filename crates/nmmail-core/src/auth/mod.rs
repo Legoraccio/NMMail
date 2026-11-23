@@ -23,6 +23,24 @@ fn refresh_key(id: AccountId) -> String {
     format!("account-{id}-refresh")
 }
 
+/// Picks the OAuth client: a non-empty user override wins over the built-in one.
+pub fn resolve_client(
+    user_id: &str,
+    user_secret: &str,
+    builtin_id: &str,
+    builtin_secret: &str,
+) -> oauth::ClientId {
+    let (id, secret) = if user_id.trim().is_empty() {
+        (builtin_id, builtin_secret)
+    } else {
+        (user_id, user_secret)
+    };
+    oauth::ClientId {
+        id: id.trim().to_string(),
+        secret: Some(secret.trim().to_string()).filter(|s| !s.is_empty()),
+    }
+}
+
 /// Hands out fresh credentials, refreshing OAuth access tokens when needed.
 pub struct AuthManager {
     secrets: Arc<dyn SecretStore>,
@@ -42,17 +60,19 @@ impl AuthManager {
         }
     }
 
+    /// The OAuth client to use for a provider: the user's override, if any,
+    /// otherwise the one built into this binary.
     pub fn client_id(&self, p: Provider) -> oauth::ClientId {
+        use crate::settings::builtin_oauth as builtin;
         let s = self.settings.read().unwrap();
         match p {
-            Provider::Gmail => oauth::ClientId {
-                id: s.google_client_id.clone(),
-                secret: Some(s.google_client_secret.clone()).filter(|x| !x.is_empty()),
-            },
-            _ => oauth::ClientId {
-                id: s.microsoft_client_id.clone(),
-                secret: None,
-            },
+            Provider::Gmail => resolve_client(
+                &s.google_client_id,
+                &s.google_client_secret,
+                builtin::GOOGLE_CLIENT_ID,
+                builtin::GOOGLE_CLIENT_SECRET,
+            ),
+            _ => resolve_client(&s.microsoft_client_id, "", builtin::MICROSOFT_CLIENT_ID, ""),
         }
     }
 
@@ -137,5 +157,25 @@ impl AuthManager {
                 access_token: self.access_token(a).await?,
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn user_override_wins_over_built_in_client() {
+        let c = resolve_client("", "", "builtin-id", "builtin-secret");
+        assert_eq!(c.id, "builtin-id");
+        assert_eq!(c.secret.as_deref(), Some("builtin-secret"));
+
+        // An override replaces both id and secret (never mixes the two clients).
+        let c = resolve_client(" mine ", "", "builtin-id", "builtin-secret");
+        assert_eq!(c.id, "mine");
+        assert_eq!(c.secret, None);
+
+        let c = resolve_client("", "", "", "");
+        assert!(c.id.is_empty(), "no client at all: sign-in reports it");
     }
 }

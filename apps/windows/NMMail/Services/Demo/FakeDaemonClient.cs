@@ -199,6 +199,7 @@ public sealed class FakeDaemonClient(DispatcherQueue dispatcher) : IDaemonClient
             UptimeSec = (Environment.TickCount64 - _startedAt) / 1000,
             MemoryBytes = 7_340_032,
             Accounts = [.. _accounts.Select(a => a.Clone())],
+            OAuthBuiltIn = new OAuthBuiltIn { Google = true, Microsoft = true },
         };
     }
 

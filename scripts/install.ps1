@@ -38,7 +38,7 @@ $lnk = $shell.CreateShortcut((Join-Path $programs 'NM Mail.lnk'))
 $lnk.TargetPath = $target
 $lnk.WorkingDirectory = $dest
 $lnk.IconLocation = "$target,0"
-$lnk.Description = 'NM Mail — Never Miss Mail'
+$lnk.Description = 'NM Mail - Never Miss Mail'
 $lnk.Save()
 
 & (Join-Path $dest 'nmmaild.exe') --register

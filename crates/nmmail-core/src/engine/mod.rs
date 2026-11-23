@@ -127,6 +127,8 @@ pub struct DaemonStatus {
     pub uptime_sec: u64,
     pub memory_bytes: u64,
     pub accounts: Vec<Account>,
+    /// Providers whose OAuth client is built into this binary.
+    pub oauth_built_in: crate::settings::OAuthBuiltIn,
 }
 
 impl Engine {
@@ -265,6 +267,7 @@ impl Engine {
             uptime_sec: self.inner.started.elapsed().as_secs(),
             memory_bytes: self.inner.platform.memory_bytes(),
             accounts: self.accounts()?,
+            oauth_built_in: crate::settings::OAuthBuiltIn::current(),
         })
     }
 

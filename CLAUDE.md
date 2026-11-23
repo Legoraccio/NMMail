@@ -14,13 +14,14 @@ Piano completo in `docs/PLAN.md`, contratto demone ↔ UI in `docs/IPC.md`.
 - UI: `dotnet build apps/windows/NMMail/NMMail.csproj -c Debug -p:Platform=x64`
 - UI senza demone (dati finti): `NMMail.exe --demo`
 - Prova completa locale: `.\scripts\dev-demo.ps1` (ferma con `-Stop`)
-- Distribuzione: `.\scripts\build.ps1` → `dist\NMMail-x64`
+- Distribuzione: `.\scripts\build.ps1` → `dist\NMMail-x64` (include le credenziali OAuth da `oauth.local.toml`, escluso da git, o dalle variabili `NMMAIL_*_CLIENT_*`)
 
 ## Variabili d'ambiente utili
 - `NMMAIL_DATA_DIR` — cartella dati alternativa (test/demo). Con questa variabile il demone non si registra all'avvio di Windows.
 - `NMMAIL_LOG` — filtro log del demone (es. `debug`, `info,nmmail_core=debug`).
 - `NMMAIL_UI` / `NMMAIL_DAEMON` — percorso dell'altro eseguibile quando non stanno nella stessa cartella.
 - `NMMAIL_PIPE` — nome pipe alternativo lato UI (test).
+- `NMMAIL_GOOGLE_CLIENT_ID`, `NMMAIL_GOOGLE_CLIENT_SECRET`, `NMMAIL_MICROSOFT_CLIENT_ID` — credenziali OAuth incluse a compile time (`option_env!` in `settings.rs`; `build.rs` forza la ricompilazione quando cambiano).
 - `NMMAIL_SNAPSHOT_DIR` — solo build Debug della UI: scrivendo un tag in `<dir>\snap.req` la UI salva PNG delle sue finestre (utile a schermo bloccato).
 
 ## Regole
@@ -29,5 +30,5 @@ Piano completo in `docs/PLAN.md`, contratto demone ↔ UI in `docs/IPC.md`.
 - async-imap mette già tra virgolette i nomi delle cartelle: passare i nomi così come restituiti da LIST.
 - Ogni modifica al protocollo IPC va riflessa in `docs/IPC.md`, nel core (`ipc.rs`) e nella UI (`Services/DaemonClient.cs`, `Models/IpcModels.cs`).
 - UI: solo `x:Bind`, JSON source-generated, `LibraryImport` (deve restare compatibile Native AOT). Pacchetti `Microsoft.WindowsAppSDK.WinUI` + `.Foundation`, non il metapacchetto (+70 MB).
-- Mai committare client secret OAuth, token o file `*.local.toml` / `.env`.
+- Mai committare client secret OAuth, token o file `*.local.toml` / `.env`. Le credenziali OAuth dell'app si registrano una volta (chi pubblica) e si includono nella build: gli utenti non devono inserire ID.
 - Documentazione utente in italiano; codice e commenti in inglese.

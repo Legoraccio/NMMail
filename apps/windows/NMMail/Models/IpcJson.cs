@@ -48,6 +48,7 @@ namespace NMMail.Models;
 [JsonSerializable(typeof(AccountsResult))]
 [JsonSerializable(typeof(AccountResult))]
 [JsonSerializable(typeof(FoldersResult))]
+[JsonSerializable(typeof(OAuthBuiltIn))]
 [JsonSerializable(typeof(FolderResult))]
 [JsonSerializable(typeof(SetMonitoredParams))]
 [JsonSerializable(typeof(MessagePage))]

@@ -271,20 +271,10 @@ impl Store {
                 r.get(0)
             })
             .optional()?;
+        // OAuth fields hold user overrides only: built-in clients are resolved
+        // at use time (`AuthManager::client_id`), never copied into the store.
         Ok(raw
             .and_then(|s| serde_json::from_str::<Settings>(&s).ok())
-            .map(|mut s| {
-                // Build-time OAuth defaults fill in blanks.
-                let d = Settings::default();
-                if s.google_client_id.is_empty() {
-                    s.google_client_id = d.google_client_id;
-                    s.google_client_secret = d.google_client_secret;
-                }
-                if s.microsoft_client_id.is_empty() {
-                    s.microsoft_client_id = d.microsoft_client_id;
-                }
-                s
-            })
             .unwrap_or_default())
     }
 

@@ -88,6 +88,11 @@ Variabili utili: `NMMAIL_DATA_DIR` (cartella dati alternativa), `NMMAIL_LOG`
 
 In alternativa `installer\NMMail.iss` produce un setup con Inno Setup 6.
 
+Per collegare Gmail e Outlook con OAuth, la build include le credenziali dell'app registrate da chi
+pubblica NM Mail: copia `oauth.example.toml` in `oauth.local.toml` (escluso da git) e inserisci gli
+ID ottenuti seguendo [la guida OAuth](docs/OAUTH_SETUP.md). Senza, gli utenti dovrebbero inserirli
+a mano in Impostazioni → OAuth (o usare per Gmail una password per le app).
+
 ## Licenza
 
 NM Mail è distribuito con licenza [PolyForm Noncommercial 1.0.0](LICENSE.md): puoi usarlo,

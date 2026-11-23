@@ -94,6 +94,8 @@ type Settings = {
   theme: "system" | "light" | "dark",
   language: "system" | "it" | "en",
   quietUntil: number | null,     // notifiche in pausa fino a
+  // Credenziali OAuth personalizzate (Impostazioni → OAuth avanzate): vuote = si usano
+  // quelle incluse nella build (vedi daemon.status → oauthBuiltIn)
   googleClientId: string, googleClientSecret: string,
   microsoftClientId: string
 }
@@ -104,7 +106,7 @@ type Settings = {
 | Metodo | Parametri | Risultato |
 |---|---|---|
 | `hello` | `{client: string, version: string}` | `{daemonVersion: string, protocol: 1}` |
-| `daemon.status` | – | `{version, pid, uptimeSec, memoryBytes, accounts: Account[]}` |
+| `daemon.status` | – | `{version, pid, uptimeSec, memoryBytes, accounts: Account[], oauthBuiltIn: {google: boolean, microsoft: boolean}}` — `oauthBuiltIn` indica i provider con credenziali OAuth incluse nel programma (l'utente non deve configurare nulla) |
 | `daemon.shutdown` | – | `{}` |
 | `accounts.list` | – | `{accounts: Account[]}` |
 | `accounts.addOAuth` | `{provider: "gmail" \| "outlook"}` | `{account: Account}` — apre il browser, può durare minuti. Se l'indirizzo esiste già è un **nuovo accesso** (token aggiornati, account riavviato) |

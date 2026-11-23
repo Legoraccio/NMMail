@@ -156,13 +156,46 @@ public sealed partial class SettingsViewModel : ObservableObject
     public partial int LanguageIndex { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowGoogleOAuthFields), nameof(ShowOAuthSave))]
     public partial string GoogleClientId { get; set; }
 
     [ObservableProperty]
     public partial string GoogleClientSecret { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowMicrosoftOAuthFields), nameof(ShowOAuthSave))]
     public partial string MicrosoftClientId { get; set; }
+
+    /// <summary>This build already contains the Google OAuth client (publisher registration).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowGoogleOAuthFields), nameof(ShowOAuthSave), nameof(AnyOAuthBuiltIn),
+        nameof(NoOAuthBuiltIn), nameof(OAuthBuiltInText))]
+    public partial bool OAuthGoogleBuiltIn { get; set; }
+
+    /// <summary>This build already contains the Microsoft OAuth client.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowMicrosoftOAuthFields), nameof(ShowOAuthSave), nameof(AnyOAuthBuiltIn),
+        nameof(NoOAuthBuiltIn), nameof(OAuthBuiltInText))]
+    public partial bool OAuthMicrosoftBuiltIn { get; set; }
+
+    /// <summary>"Use my own credentials" (advanced): shows the override fields of built-in clients.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowGoogleOAuthFields), nameof(ShowMicrosoftOAuthFields), nameof(ShowOAuthSave))]
+    public partial bool ShowOAuthAdvanced { get; set; }
+
+    public bool AnyOAuthBuiltIn => OAuthGoogleBuiltIn || OAuthMicrosoftBuiltIn;
+    public bool NoOAuthBuiltIn => !AnyOAuthBuiltIn;
+    public bool ShowGoogleOAuthFields => !OAuthGoogleBuiltIn || ShowOAuthAdvanced || !string.IsNullOrWhiteSpace(GoogleClientId);
+    public bool ShowMicrosoftOAuthFields => !OAuthMicrosoftBuiltIn || ShowOAuthAdvanced || !string.IsNullOrWhiteSpace(MicrosoftClientId);
+    public bool ShowOAuthSave => ShowGoogleOAuthFields || ShowMicrosoftOAuthFields;
+
+    public string OAuthBuiltInText => (OAuthGoogleBuiltIn, OAuthMicrosoftBuiltIn) switch
+    {
+        (true, true) => Loc.Get("Settings_OAuthBuiltInBoth"),
+        (true, false) => Loc.Get("Settings_OAuthBuiltInGoogle"),
+        (false, true) => Loc.Get("Settings_OAuthBuiltInMicrosoft"),
+        _ => "",
+    };
 
     [ObservableProperty]
     public partial string QuietText { get; set; }
@@ -416,6 +449,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         try
         {
             var status = await Client.GetStatusAsync();
+            OAuthGoogleBuiltIn = status.OAuthBuiltIn?.Google ?? false;
+            OAuthMicrosoftBuiltIn = status.OAuthBuiltIn?.Microsoft ?? false;
             DaemonVersion = status.Version;
             DaemonPid = status.Pid.ToString(CultureInfo.CurrentCulture);
             DaemonUptime = Fmt.Duration(status.UptimeSec);

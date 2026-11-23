@@ -260,7 +260,11 @@
   <data name="Settings_Cache180.Content" xml:space="preserve"><value>180 giorni</value></data>
   <data name="Settings_Cache365.Content" xml:space="preserve"><value>1 anno</value></data>
   <data name="Settings_OAuthHeader.Text" xml:space="preserve"><value>Credenziali OAuth</value></data>
-  <data name="Settings_OAuthDescription.Text" xml:space="preserve"><value>Per collegare Gmail e Outlook, NM Mail usa un'app OAuth registrata da te (gratuita, nessun server di terze parti). Segui la guida passo-passo in docs/OAUTH_SETUP.md e incolla qui gli identificativi.</value></data>
+  <data name="Settings_OAuthDescription.Text" xml:space="preserve"><value>Questa versione di NM Mail non include credenziali OAuth (succede se la compili da te). Registra l'app seguendo docs/OAUTH_SETUP.md e incolla qui gli identificativi; per Gmail puoi anche usare una password per le app con «Altro (IMAP)».</value></data>
+  <data name="Settings_OAuthAdvanced.Content" xml:space="preserve"><value>Usa credenziali personalizzate (avanzato)</value></data>
+  <data name="Settings_OAuthBuiltInMicrosoft" xml:space="preserve"><value>Questa versione di NM Mail include già le credenziali per Outlook. Per Gmail inserisci qui sotto le tue credenziali Google, oppure aggiungi l'account con una password per le app («Altro (IMAP)»).</value></data>
+  <data name="Settings_OAuthBuiltInGoogle" xml:space="preserve"><value>Questa versione di NM Mail include già le credenziali per Gmail. Per Outlook inserisci qui sotto un client ID registrato su Microsoft Entra.</value></data>
+  <data name="Settings_OAuthBuiltInBoth" xml:space="preserve"><value>Questa versione di NM Mail include già le credenziali per Gmail e Outlook: non devi configurare nulla, basta aggiungere l'account.</value></data>
   <data name="Settings_GoogleClientId.Header" xml:space="preserve"><value>Client ID</value></data>
   <data name="Settings_GoogleClientSecret.Header" xml:space="preserve"><value>Client secret</value></data>
   <data name="Settings_MicrosoftClientId.Header" xml:space="preserve"><value>Client ID (ID applicazione)</value></data>

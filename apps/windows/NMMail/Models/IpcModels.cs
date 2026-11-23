@@ -465,6 +465,16 @@ public sealed class DaemonStatus
     public long UptimeSec { get; set; }
     public long MemoryBytes { get; set; }
     public Account[] Accounts { get; set; } = [];
+
+    /// <summary>Providers whose OAuth client is built into this daemon (nothing to configure).</summary>
+    [JsonPropertyName("oauthBuiltIn")]
+    public OAuthBuiltIn? OAuthBuiltIn { get; set; }
+}
+
+public sealed class OAuthBuiltIn
+{
+    public bool Google { get; set; }
+    public bool Microsoft { get; set; }
 }
 
 public sealed class AccountsResult
